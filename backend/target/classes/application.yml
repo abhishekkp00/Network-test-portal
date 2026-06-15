@@ -1,0 +1,30 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/network_portal
+    username: abhishek
+    password: Abhi@1234
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+security:
+  jwt:
+    # Base64 encoded string: "this-is-a-secure-and-super-long-secret-key-to-sign-jots-with-hmac-sha-256"
+    secret: dGhpcy1pcy1hLXNlY3VyZS1hbmQtc3VwZXItbG9uZy1zZWNyZXQta2V5LXRvLXNpZ24tam90cy13aXRoLWhtYWMtc2hhLTI1Ng==
+    # Expiration: 1 day in milliseconds
+    expiration: 86400000
+
+workers:
+  python-path: python3
+  ping-script-path: /home/abhishek/Projects/Network-test-portal/python-workers/ping_worker.py
+  iperf-script-path: /home/abhishek/Projects/Network-test-portal/python-workers/iperf_worker.py
+  timeout-seconds: 30
