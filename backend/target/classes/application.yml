@@ -2,6 +2,10 @@ server:
   port: 8082
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
   datasource:
     url: jdbc:postgresql://localhost:5432/network_portal
     username: abhishek
@@ -18,10 +22,8 @@ spring:
 
 security:
   jwt:
-    # Base64 encoded string: "this-is-a-secure-and-super-long-secret-key-to-sign-jots-with-hmac-sha-256"
-    secret: dGhpcy1pcy1hLXNlY3VyZS1hbmQtc3VwZXItbG9uZy1zZWNyZXQta2V5LXRvLXNpZ24tam90cy13aXRoLWhtYWMtc2hhLTI1Ng==
-    # Expiration: 1 day in milliseconds
-    expiration: 86400000
+    secret: ${SECURITY_JWT_SECRET}
+    expiration: ${SECURITY_JWT_EXPIRATION}
 
 workers:
   python-path: python3

@@ -1,0 +1,19 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build and dependency directories
+target/
+*.class
+dependency-reduced-pom.xml
+node_modules/
+
+# Local Environment Variables
+.env
+backend/.env
