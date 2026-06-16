@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 
-// Simple placeholders for Phase 1 (to be built out in future phases)
+// Simple placeholders for Phase 3/4
 const Home = () => {
   const { user } = useAuth();
   return (
@@ -28,29 +30,6 @@ const Home = () => {
     </div>
   );
 };
-
-const LoginPlaceholder = () => (
-  <div className="container" style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
-    <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-      <h2>Sign In</h2>
-      <p style={{ marginBottom: '24px' }}>Phase 2: Authentication views will go here.</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <input type="text" className="form-control" placeholder="Username" disabled />
-        <input type="password" className="form-control" placeholder="Password" disabled />
-        <button className="btn btn-primary" disabled>Login</button>
-      </div>
-    </div>
-  </div>
-);
-
-const RegisterPlaceholder = () => (
-  <div className="container" style={{ display: 'flex', justifyContent: 'center', padding: '80px 20px' }}>
-    <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-      <h2>Register Account</h2>
-      <p style={{ marginBottom: '24px' }}>Phase 2: Registration views will go here.</p>
-    </div>
-  </div>
-);
 
 const ProfilesPlaceholder = () => (
   <div className="container">
@@ -98,11 +77,11 @@ const AppContent = () => {
         {/* Public Routes */}
         <Route 
           path="/login" 
-          element={user ? <Navigate to="/" replace /> : <LoginPlaceholder />} 
+          element={user ? <Navigate to="/" replace /> : <Login />} 
         />
         <Route 
           path="/register" 
-          element={user ? <Navigate to="/" replace /> : <RegisterPlaceholder />} 
+          element={user ? <Navigate to="/" replace /> : <Register />} 
         />
 
         {/* Protected Routes */}
