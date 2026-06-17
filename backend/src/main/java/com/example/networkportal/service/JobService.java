@@ -37,6 +37,13 @@ public class JobService {
     private final PythonWorkerExecutorService workerExecutorService;
     private final AuditLogService auditLogService;
 
+    private JobService self;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSelf(@org.springframework.context.annotation.Lazy JobService self) {
+        this.self = self;
+    }
+
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public JobResponse createJob(JobRequest request, User currentUser) {
@@ -73,8 +80,19 @@ public class JobService {
                 "Created test job for profile: " + profile.getName() + " (Status: PENDING)"
         );
 
-        // Run the worker asynchronously in a background thread
-        triggerAsyncExecution(job.getId());
+        // Run the worker asynchronously in a background thread AFTER the transaction commits
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        triggerAsyncExecution(job.getId());
+                    }
+                }
+            );
+        } else {
+            triggerAsyncExecution(job.getId());
+        }
 
         return mapToResponse(job);
     }
@@ -97,7 +115,7 @@ public class JobService {
         CompletableFuture.runAsync(() -> {
             try {
                 // Phase 1: Mark job as RUNNING in a short transaction
-                updateJobStatus(jobId, JobStatus.RUNNING, LocalDateTime.now(), null);
+                self.updateJobStatus(jobId, JobStatus.RUNNING, LocalDateTime.now(), null);
 
                 // Fetch job details to get effective parameters
                 TestJob job = jobRepository.findById(jobId)
@@ -123,7 +141,7 @@ public class JobService {
                     finalStatus = JobStatus.FAILED;
                 }
 
-                saveJobResult(jobId, finalStatus, output);
+                self.saveJobResult(jobId, finalStatus, output);
 
             } catch (Exception e) {
                 log.error("Error running background job: " + jobId, e);
@@ -132,7 +150,7 @@ public class JobService {
                             .status("FAILED")
                             .errorMessage("Background execution error: " + e.getMessage())
                             .build();
-                    saveJobResult(jobId, JobStatus.FAILED, errorOutput);
+                    self.saveJobResult(jobId, JobStatus.FAILED, errorOutput);
                 } catch (Exception ex) {
                     log.error("Failed to mark job as failed: " + jobId, ex);
                 }

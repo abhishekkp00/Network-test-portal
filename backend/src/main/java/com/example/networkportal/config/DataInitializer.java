@@ -17,19 +17,28 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${APP_SECURITY_DEFAULT_ADMIN_USERNAME}")
+    private String defaultAdminUsername;
+
+    @org.springframework.beans.factory.annotation.Value("${APP_SECURITY_DEFAULT_ADMIN_EMAIL}")
+    private String defaultAdminEmail;
+
+    @org.springframework.beans.factory.annotation.Value("${APP_SECURITY_DEFAULT_ADMIN_PASSWORD}")
+    private String defaultAdminPassword;
+
     @Override
     public void run(String... args) {
         if (userRepository.count() == 0) {
             log.info("No users found in database. Seeding default admin user...");
             User admin = User.builder()
-                    .username("admin")
-                    .email("admin@example.com")
-                    .passwordHash(passwordEncoder.encode("adminpassword"))
+                    .username(defaultAdminUsername)
+                    .email(defaultAdminEmail)
+                    .passwordHash(passwordEncoder.encode(defaultAdminPassword))
                     .role(Role.ADMIN)
                     .enabled(true)
                     .build();
             userRepository.save(admin);
-            log.info("Default admin user created successfully! (Username: admin, Password: adminpassword)");
+            log.info("Default admin user created successfully! (Username: {}, Email: {})", defaultAdminUsername, defaultAdminEmail);
         } else {
             log.info("Database already contains users. Skipping admin seeding.");
         }
