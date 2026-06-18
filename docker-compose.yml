@@ -7,12 +7,57 @@ services:
     restart: always
     environment:
       POSTGRES_DB: network_portal
-      POSTGRES_USER: portal_user
-      POSTGRES_PASSWORD: portal_password
+      POSTGRES_USER: abhishek
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-Abhi@1234}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - network-test-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: network_portal_backend
+    restart: always
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/network_portal
+      - SPRING_DATASOURCE_USERNAME=abhishek
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-Abhi@1234}
+      - SECURITY_JWT_SECRET=${SECURITY_JWT_SECRET:-dGhpcy1pcy1hLXNlY3VyZS1hbmQtc3VwZXItbG9uZy1zZWNyZXQta2V5LXRvLXNpZ24tam90cy13aXRoLWhtYWMtc2hhLTI1Ng==}
+      - SECURITY_JWT_EXPIRATION=86400000
+      - APP_SECURITY_DEFAULT_ADMIN_USERNAME=admin
+      - APP_SECURITY_DEFAULT_ADMIN_EMAIL=admin@example.com
+      - APP_SECURITY_DEFAULT_ADMIN_PASSWORD=${APP_SECURITY_DEFAULT_ADMIN_PASSWORD:-adminpassword}
+      - WORKERS_PYTHON_PATH=python3
+      - WORKERS_PING_SCRIPT_PATH=../python-workers/ping_worker.py
+      - WORKERS_IPERF_SCRIPT_PATH=../python-workers/iperf_worker.py
+      - WORKERS_TIMEOUT_SECONDS=30
+    depends_on:
+      - db
+    networks:
+      - network-test-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: network_portal_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - network-test-net
 
 volumes:
   postgres_data:
+
+networks:
+  network-test-net:
+    driver: bridge
