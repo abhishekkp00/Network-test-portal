@@ -24,4 +24,9 @@ public class ResultController {
     public ResponseEntity<ResultResponse> getResultById(@PathVariable Long id) {
         return ResponseEntity.ok(resultService.getResultById(id));
     }
+
+    @GetMapping("/profile/{profileId}")
+    public ResponseEntity<List<ResultResponse>> getProfileResultHistory(@PathVariable Long profileId) {
+        return ResponseEntity.ok(resultService.getProfileResultHistory(profileId));
+    }
 }

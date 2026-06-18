@@ -38,6 +38,13 @@ public class ResultService {
         return mapToResponse(result);
     }
 
+    @Transactional(readOnly = true)
+    public List<ResultResponse> getProfileResultHistory(Long profileId) {
+        return resultRepository.findByTestJobProfileIdOrderByCreatedAtAsc(profileId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     public ResultResponse mapToResponse(TestResult result) {
         return ResultResponse.builder()
                 .id(result.getId())

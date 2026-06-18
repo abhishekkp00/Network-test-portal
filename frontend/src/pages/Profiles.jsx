@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 const validateHostOrIp = (value) => {
   if (!value) return false;
@@ -49,6 +50,28 @@ export const Profiles = () => {
   const [cronPreset, setCronPreset] = useState('0 0 * * * *');
   const [cronExpression, setCronExpression] = useState('0 0 * * * *');
   const [isCustomCron, setIsCustomCron] = useState(false);
+
+  // History Modal State
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+
+  const openHistoryModal = async (profile) => {
+    setSelectedProfile(profile);
+    setIsHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryError('');
+    setHistoryData([]);
+    try {
+      const data = await api.get(`/results/profile/${profile.id}`);
+      setHistoryData(data);
+    } catch (err) {
+      setHistoryError(err.message || 'Failed to fetch history data.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // Overrides Fields for Triggering Job
   const [hostOverride, setHostOverride] = useState('');
@@ -414,6 +437,9 @@ export const Profiles = () => {
                       </button>
                     </>
                   )}
+                  <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openHistoryModal(p)}>
+                    History
+                  </button>
                   {canTrigger && (
                     <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openTriggerModal(p)}>
                       Run Test
@@ -601,6 +627,104 @@ export const Profiles = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY GRAPH MODAL */}
+      {isHistoryOpen && selectedProfile && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
+              <h2 style={{ margin: 0 }}>{selectedProfile.name} - Performance History</h2>
+              <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem' }} onClick={() => setIsHistoryOpen(false)}>
+                Close
+              </button>
+            </div>
+
+            {historyLoading && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '50px', gap: '8px', alignItems: 'center' }}>
+                <div className="spinner"></div>
+                <span style={{ color: 'var(--text-secondary)' }}>Loading history data...</span>
+              </div>
+            )}
+
+            {historyError && (
+              <div style={{ padding: '12px', backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
+                {historyError}
+              </div>
+            )}
+
+            {!historyLoading && !historyError && historyData.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                No execution history found for this profile. Run a test first to generate metrics.
+              </div>
+            )}
+
+            {!historyLoading && !historyError && historyData.length > 0 && (
+              <div>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                  Showing metrics over the last {historyData.length} executions.
+                </p>
+
+                {/* Latency / Throughput Line Chart */}
+                <div style={{ marginBottom: '30px' }}>
+                  <h4 style={{ marginBottom: '12px', color: 'var(--text-primary)' }}>
+                    {selectedProfile.protocol === 'PING' ? 'Average Latency (RTT Avg)' : 'Throughput'}
+                  </h4>
+                  <div style={{ width: '100%', height: '240px' }}>
+                    <ResponsiveContainer>
+                      <LineChart data={historyData.map(d => ({
+                        time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        latency: d.rttAvgMs,
+                        throughput: d.throughputMbps,
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} unit={selectedProfile.protocol === 'PING' ? ' ms' : ' Mbps'} />
+                        <Tooltip 
+                          contentStyle={{ background: '#0a0d16', border: '1px solid var(--border-glass)', borderRadius: '6px' }}
+                          labelStyle={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+                        {selectedProfile.protocol === 'PING' ? (
+                          <Line type="monotone" dataKey="latency" name="Latency (ms)" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        ) : (
+                          <Line type="monotone" dataKey="throughput" name="Throughput (Mbps)" stroke="var(--color-success)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Packet Loss & Jitter Line Chart */}
+                <div>
+                  <h4 style={{ marginBottom: '12px', color: 'var(--text-primary)' }}>Packet Loss & Jitter</h4>
+                  <div style={{ width: '100%', height: '240px' }}>
+                    <ResponsiveContainer>
+                      <LineChart data={historyData.map(d => ({
+                        time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        loss: d.packetLossPct,
+                        jitter: d.jitterMs
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ background: '#0a0d16', border: '1px solid var(--border-glass)', borderRadius: '6px' }}
+                          labelStyle={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
+                        <Line type="monotone" dataKey="loss" name="Packet Loss (%)" stroke="var(--color-danger)" strokeWidth={2} dot={{ r: 3 }} />
+                        {selectedProfile.protocol === 'IPERF' && (
+                          <Line type="monotone" dataKey="jitter" name="Jitter (ms)" stroke="var(--color-warning)" strokeWidth={2} dot={{ r: 3 }} />
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
