@@ -1,179 +1,166 @@
-# Network Test Automation Portal 2026
+# 🌐 Distributed Network Monitoring & Diagnostic Portal
 
-A secure, enterprise-ready orchestration engine for network test automation, built with Spring Boot 3, Java 17, Spring Security + JWT, PostgreSQL, and Python workers.
-
----
-
-## 1. System Requirements
-
-*   **Java**: JDK 17 or higher
-*   **Maven**: 3.8+
-*   **Docker & Docker Compose** (for PostgreSQL)
-*   **Python**: 3.10+
-*   **Linux Networking Utils**: `ping` and `iperf3` (for local worker executions)
+A production-grade, secure orchestration portal designed to coordinate distributed network diagnostics (Ping, iPerf3) across multiple remote subnets. Built with **Spring Boot 3 (Java 17)**, **React (Vite)**, and **Python-based polling edge clients**, this platform solves the problem of "vantage point bias" in network monitoring by measuring latency and throughput from the edge of your network back to target endpoints.
 
 ---
 
-## 2. Setting Up Local Environment
+## 🚀 Key Features
 
-### Step A: System Utilities Installation (Debian/Ubuntu)
-Make sure `iperf3` and standard `ping` tools are installed and available on your system path.
-```bash
-sudo apt update
-sudo apt install iperf3 iputils-ping -y
+* **Distributed Edge Polling Architecture**: Remote agents run as lightweight Python processes within isolated subnets. Instead of exposing subnets via inbound firewall ports, agents securely poll the central controller outbound using UUID-based headers (`X-Agent-Token`).
+* **🌐 NOC Subnet Topology Map**: A real-time visual NOC (Network Operations Center) board in the frontend displaying active connections, pulsing controller states, and live CSS packet stream animations representing active polling.
+* **🛡️ Command Injection Protection**: Deep parameter sanitization combined with custom Spring JSR-380 validators (`@HostOrIp`) ensuring that user-provided test inputs cannot trigger shell code execution vulnerabilities on local or remote runners.
+* **⏰ Dynamic Cron Scheduling**: Set automated execution schedules (e.g., hourly pings or daily throughput checks) per profile using standard Spring Scheduler cron triggers, dynamically controlled via the UI.
+* **🚨 Multi-Channel Alerting**: Instant alerting dispatch to **Slack** and **Discord** webhooks if latency or packet loss breaches defined thresholds, with internal console-based SMTP warnings.
+* **📊 Historical Trends & Charts**: Pop-over timelines utilizing **Recharts** to display latency (min/avg/max) and packet loss metrics over time, helping administrators spot network degradation trends.
+* **🔑 Role-Based Access Controls (RBAC)**: Secure access restricted via JWT stateless authentication. Roles include `ADMIN` (full access), `OPERATOR` (run tests/view results), and `VIEWER` (read-only charts).
+* **📝 Security Audit Trails**: All structural or administrative modifications (user role edits, agent token generation, manually triggered runs) are recorded in a permanent audit log database.
+
+---
+
+## 📐 System Architecture
+
+```mermaid
+graph TD
+    subgraph Central Portal Server
+        A[React Frontend] <-->|JWT / REST API| B[Spring Boot Backend]
+        B <-->|JPA / JDBC| C[(PostgreSQL Database)]
+        B -->|Job Dispatch Queue| D[Local Workers]
+        B -->|Scheduled Triggers| E[Cron Engine]
+        B -->|Alert Rules| F[Notification Service]
+        F -->|JSON Webhooks| G[Slack / Discord / SMTP]
+    end
+    
+    subgraph Isolated Subnet A
+        H[Python Agent A] --->|Outbound Poll / HTTP| B
+    end
+    
+    subgraph Isolated Subnet B
+        I[Python Agent B] --->|Outbound Poll / HTTP| B
+    end
 ```
 
-### Step B: Launch Database
-Start the PostgreSQL container:
+---
+
+## 🛠️ Technology Stack
+
+* **Backend**: Spring Boot 3, Java 17, Spring Security, JWT, JPA/Hibernate, Spring Validation
+* **Frontend**: React 18, Vite, Recharts, Custom NOC CSS Animations
+* **Database**: PostgreSQL 15
+* **Edge Runners**: Python 3.10+, socket, subprocess, requests
+
+---
+
+## ⚙️ Setting Up The Environment
+
+### 1. System Requirements & Dependencies
+Before launching, make sure the running machine has the following tools installed:
+* **Java 17 JDK** or higher
+* **Maven 3.8+**
+* **Docker & Docker Compose**
+* **Python 3.10+** (with the `requests` library)
+* **System Utilities**: `iperf3` and `iputils-ping` must be in your system path if you intend to run local tests.
+  ```bash
+  sudo apt update && sudo apt install iperf3 iputils-ping -y
+  ```
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory:
+```env
+# Database Credentials
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/network_portal
+SPRING_DATASOURCE_USERNAME=abhishek
+SPRING_DATASOURCE_PASSWORD=Abhi@1234
+
+# Security / JWT Keys
+SECURITY_JWT_SECRET=dGhpcy1pcy1hLXNlY3VyZS1hbmQtc3VwZXItbG9uZy1zZWNyZXQta2V5LXRvLXNpZ24tam90cy13aXRoLWhtYWMtc2hwLTI1Ng==
+SECURITY_JWT_EXPIRATION=86400000
+
+# Seeding Credentials
+APP_SECURITY_DEFAULT_ADMIN_USERNAME=admin
+APP_SECURITY_DEFAULT_ADMIN_EMAIL=admin@example.com
+APP_SECURITY_DEFAULT_ADMIN_PASSWORD=adminpassword
+
+# Local Workers configuration
+WORKERS_PYTHON_PATH=python3
+WORKERS_PING_SCRIPT_PATH=../python-workers/ping_worker.py
+WORKERS_IPERF_SCRIPT_PATH=../python-workers/iperf_worker.py
+WORKERS_TIMEOUT_SECONDS=30
+
+# Webhook Notifications (Optional)
+ALERTS_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+ALERTS_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+ALERTS_LATENCY_THRESHOLD_MS=100.0
+ALERTS_PACKET_LOSS_THRESHOLD_PCT=5.0
+```
+
+---
+
+## 🚀 Step-by-Step Running Guide
+
+### Step 1: Start PostgreSQL
 ```bash
 docker compose up -d
 ```
 
-### Step C: Build and Run Spring Boot Application
-1. Go to the backend folder:
+### Step 2: Build & Start Spring Boot Backend
+1. Navigate to the backend directory:
    ```bash
    cd backend
    ```
-2. Build the project:
+2. Build the JAR package:
    ```bash
    mvn clean install
    ```
-3. Run the Spring Boot application:
+3. Run the application:
    ```bash
    mvn spring-boot:run
    ```
-   *The server starts on port `8080`.*
-   *A default user is automatically seeded on startup:*
-   *   **Username**: `admin`
-   *   **Password**: `adminpassword`
-   *   **Role**: `ADMIN`
+   *The server starts on port `8082`.*
+
+### Step 3: Start React Frontend
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install node dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+   *The UI starts on port `5173`. Open your browser to `http://localhost:5173`.*
+
+### Step 4: Connecting a Remote Subnet Agent
+1. Log in to the portal as `admin` (default password: `adminpassword`).
+2. Go to the **Subnet Agents** page.
+3. Register a new agent name (e.g. `Dev-Sandbox`) and copy the generated **Security Token**.
+4. In your terminal, launch the Python agent script:
+   ```bash
+   PORTAL_SERVER_URL="http://localhost:8082" AGENT_TOKEN="<PASTE_YOUR_GENERATED_TOKEN>" python3 python-agent/agent_client.py
+   ```
+5. Look at the **NOC Subnet Topology Map**—the agent's state will instantly turn **ONLINE** with real-time green signal flows.
 
 ---
 
-## 3. API Walkthrough & Verification Flow
+## 🛡️ Security Audit & Verification Flow
 
-### 1. Authenticate (Login as Admin)
-Retrieve your bearer token:
+To verify backend-enforced commands, you can inspect the JWT-protected endpoints using curl:
+
+### 1. Authenticate & Obtain Token
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:8082/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username": "admin", "password": "adminpassword"}'
 ```
-**Expected Response:**
-```json
-{
-  "token": "eyJhbGciOi...",
-  "username": "admin",
-  "email": "admin@example.com",
-  "role": "ADMIN"
-}
-```
-*Export this token to a variable for ease of testing:*
+
+### 2. Dispatch a Test Job (Targeting the Remote Agent)
+Once you have the token, issue a test job by referencing the profile ID:
 ```bash
-export JWT_TOKEN="eyJhbGciOi..."
-```
-
----
-
-### 2. Create a Test Profile (As Operator/Admin)
-Create a new profile configuring a Ping test to Google DNS:
-```bash
-curl -X POST http://localhost:8080/api/v1/profiles \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Google DNS Ping",
-    "description": "Ping test to Google Primary DNS",
-    "host": "8.8.8.8",
-    "protocol": "PING",
-    "count": 5
-  }'
-```
-**Expected Response:**
-```json
-{
-  "id": 1,
-  "name": "Google DNS Ping",
-  "description": "Ping test to Google Primary DNS",
-  "host": "8.8.8.8",
-  "server": null,
-  "protocol": "PING",
-  "count": 5,
-  "durationSeconds": null,
-  "port": null,
-  "notes": null,
-  "createdByUsername": "admin"
-}
-```
-
----
-
-### 3. Create a Test Job (Trigger Execution)
-Trigger a test job from the profile created:
-```bash
-curl -X POST http://localhost:8080/api/v1/jobs \
-  -H "Authorization: Bearer $JWT_TOKEN" \
+curl -X POST http://localhost:8082/api/v1/jobs \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"profileId": 1}'
 ```
-**Expected Response:**
-```json
-{
-  "id": 1,
-  "profileId": 1,
-  "profileName": "Google DNS Ping",
-  "requestedByUsername": "admin",
-  "status": "PENDING",
-  "effectiveHost": "8.8.8.8",
-  "effectiveServer": null,
-  "effectiveProtocol": "PING",
-  "effectiveCount": 5,
-  "effectiveDurationSeconds": null,
-  "effectivePort": null,
-  "startedAt": null,
-  "finishedAt": null
-}
-```
-
----
-
-### 4. Fetch Job Status & Results
-Poll the job details or request the result once status changes to `SUCCESS` or `FAILED`:
-
-#### Retrieve Job
-```bash
-curl -X GET http://localhost:8080/api/v1/jobs/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-#### Retrieve Specific Result
-```bash
-curl -X GET http://localhost:8080/api/v1/jobs/1/result \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-**Expected Output (Truncated):**
-```json
-{
-  "id": 1,
-  "jobId": 1,
-  "packetLossPct": 0.0,
-  "throughputMbps": null,
-  "rttMinMs": 8.12,
-  "rttAvgMs": 12.45,
-  "rttMaxMs": 17.01,
-  "jitterMs": 1.54,
-  "rawOutput": "...",
-  "errorMessage": null,
-  "exitCode": 0,
-  "parsedStatus": "SUCCESS"
-}
-```
-
----
-
-### 5. Fetch Audit Logs (Admin Only)
-Verify security audit records:
-```bash
-curl -X GET http://localhost:8080/api/v1/audit-logs \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
+The job will enter the pending queue, the remote Python agent will claim it, execute the test locally, and stream back the result metrics for packet loss and latency.
