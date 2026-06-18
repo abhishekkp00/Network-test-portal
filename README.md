@@ -63,36 +63,6 @@ Before launching, make sure the running machine has the following tools installe
   sudo apt update && sudo apt install iperf3 iputils-ping -y
   ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in the root directory:
-```env
-# Database Credentials
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/network_portal
-SPRING_DATASOURCE_USERNAME=abhishek
-SPRING_DATASOURCE_PASSWORD=Abhi@1234
-
-# Security / JWT Keys
-SECURITY_JWT_SECRET=dGhpcy1pcy1hLXNlY3VyZS1hbmQtc3VwZXItbG9uZy1zZWNyZXQta2V5LXRvLXNpZ24tam90cy13aXRoLWhtYWMtc2hwLTI1Ng==
-SECURITY_JWT_EXPIRATION=86400000
-
-# Seeding Credentials
-APP_SECURITY_DEFAULT_ADMIN_USERNAME=admin
-APP_SECURITY_DEFAULT_ADMIN_EMAIL=admin@example.com
-APP_SECURITY_DEFAULT_ADMIN_PASSWORD=adminpassword
-
-# Local Workers configuration
-WORKERS_PYTHON_PATH=python3
-WORKERS_PING_SCRIPT_PATH=../python-workers/ping_worker.py
-WORKERS_IPERF_SCRIPT_PATH=../python-workers/iperf_worker.py
-WORKERS_TIMEOUT_SECONDS=30
-
-# Webhook Notifications (Optional)
-ALERTS_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
-ALERTS_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-ALERTS_LATENCY_THRESHOLD_MS=100.0
-ALERTS_PACKET_LOSS_THRESHOLD_PCT=5.0
-```
-
 ---
 
 ## 🚀 Step-by-Step Running Guide
