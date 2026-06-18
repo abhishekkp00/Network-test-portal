@@ -119,6 +119,158 @@ export const Agents = () => {
         </button>
       </div>
 
+      {/* Topology Styles */}
+      <style>{`
+        @keyframes portalPulse {
+          0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+          70% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+        @keyframes packetStream {
+          0% { left: 0%; opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { left: 100%; opacity: 0; }
+        }
+      `}</style>
+
+      {/* Network NOC Topology Dashboard */}
+      <div className="glass-panel" style={{ marginBottom: '30px', padding: '24px' }}>
+        <h2 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>🌐 NOC Subnet Topology Map</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', background: 'var(--color-primary-glass)', padding: '2px 8px', borderRadius: '4px', transform: 'scale(0.95)', fontWeight: 'bold' }}>Live Link Status</span>
+        </h2>
+        {agents.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            No agent nodes currently active in the topology. Register and start an agent to visualize the network links.
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            background: 'rgba(10, 13, 22, 0.4)',
+            borderRadius: 'var(--radius-md)',
+            padding: '24px',
+            border: '1px solid var(--border-glass)',
+            minHeight: '160px',
+            flexWrap: 'wrap',
+            gap: '30px'
+          }}>
+            {/* Center Node */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-primary)',
+              background: 'rgba(99, 102, 241, 0.08)',
+              position: 'relative',
+              minWidth: '200px',
+              textAlign: 'center',
+              boxShadow: '0 0 15px rgba(99, 102, 241, 0.15)'
+            }}>
+              <div style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                borderRadius: 'var(--radius-md)',
+                top: 0,
+                left: 0,
+                animation: 'portalPulse 2.5s infinite ease-in-out',
+                pointerEvents: 'none'
+              }}></div>
+              <span style={{ fontSize: '2rem', marginBottom: '6px' }}>🖥️</span>
+              <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#82aaff' }}>Portal Controller</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>localhost:8082</span>
+            </div>
+
+            {/* Connecting Channels & Nodes Container */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '16px', 
+              flex: 1, 
+              minWidth: '280px' 
+            }}>
+              {agents.map((agent) => {
+                const isOnline = agent.lastSeenAt && ((new Date() - new Date(agent.lastSeenAt)) / 1000) < 25;
+                const statusColor = isOnline ? 'var(--color-success)' : 'var(--color-danger)';
+                const statusLabel = isOnline ? 'Online' : 'Offline';
+                return (
+                  <div key={agent.id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '16px' 
+                  }}>
+                    {/* Animated Connection Cable */}
+                    <div style={{ 
+                      flex: 1, 
+                      height: '2px', 
+                      background: isOnline 
+                        ? 'linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%)' 
+                        : 'rgba(255, 255, 255, 0.05)', 
+                      position: 'relative',
+                      minWidth: '80px',
+                      borderRadius: '1px'
+                    }}>
+                      {isOnline && (
+                        <div className="topo-packet" style={{
+                          position: 'absolute',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--color-success)',
+                          boxShadow: '0 0 10px var(--color-success)',
+                          top: '-3px',
+                          animation: 'packetStream 2.0s infinite linear'
+                        }}></div>
+                      )}
+                    </div>
+
+                    {/* Agent Node box */}
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '12px 18px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-glass)',
+                      minWidth: '260px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--text-primary)' }}>{agent.name}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {agent.description || 'Remote Subnet Endpoint'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%', 
+                          backgroundColor: statusColor,
+                          boxShadow: `0 0 10px ${statusColor}`,
+                          animation: isOnline ? 'pulse 1.8s infinite' : 'none'
+                        }}></div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: isOnline ? 'var(--color-success)' : 'var(--text-muted)' }}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       {error && (
         <div style={{ padding: '12px', backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)', borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem' }}>
           {error}

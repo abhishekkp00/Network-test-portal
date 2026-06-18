@@ -41,15 +41,28 @@ class ApiClient {
         if (this.logoutCallback) {
           this.logoutCallback();
         }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Session expired. Please log in again.');
+        let errorMsg = 'Session expired. Please log in again.';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch (e) {
+          // ignore
+        }
+        throw new Error(errorMsg);
       }
 
       if (response.status === 204) {
         return null;
       }
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { message: text || `Error ${response.status}: ${response.statusText}` };
+      }
       
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Something went wrong');
