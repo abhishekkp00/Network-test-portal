@@ -38,5 +38,8 @@ public class ProfileRequest {
     private Integer port;
 
     private String notes;
+
+    private String cronExpression;
+    private Boolean scheduleEnabled;
 }
 

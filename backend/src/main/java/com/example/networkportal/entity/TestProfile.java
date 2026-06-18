@@ -49,6 +49,13 @@ public class TestProfile {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "cron_expression")
+    private String cronExpression;
+
+    @Column(name = "schedule_enabled", nullable = false)
+    @Builder.Default
+    private Boolean scheduleEnabled = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id", nullable = false)
     private User createdBy;

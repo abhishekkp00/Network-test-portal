@@ -22,6 +22,7 @@ public class ProfileService {
 
     private final TestProfileRepository profileRepository;
     private final AuditLogService auditLogService;
+    private final SchedulingService schedulingService;
 
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
@@ -36,10 +37,16 @@ public class ProfileService {
                 .durationSeconds(request.getDurationSeconds())
                 .port(request.getPort())
                 .notes(request.getNotes())
+                .cronExpression(request.getCronExpression())
+                .scheduleEnabled(request.getScheduleEnabled() != null ? request.getScheduleEnabled() : false)
                 .createdBy(currentUser)
                 .build();
 
         profileRepository.save(profile);
+
+        // Dynamic schedule registration
+        schedulingService.scheduleProfile(profile);
+
 
         auditLogService.log(
                 currentUser.getUsername(),
@@ -86,8 +93,13 @@ public class ProfileService {
         profile.setDurationSeconds(request.getDurationSeconds());
         profile.setPort(request.getPort());
         profile.setNotes(request.getNotes());
+        profile.setCronExpression(request.getCronExpression());
+        profile.setScheduleEnabled(request.getScheduleEnabled() != null ? request.getScheduleEnabled() : false);
 
         profileRepository.save(profile);
+
+        // Update schedule dynamically
+        schedulingService.scheduleProfile(profile);
 
         auditLogService.log(
                 currentUser.getUsername(),
@@ -110,6 +122,9 @@ public class ProfileService {
         if (currentUser.getRole() == Role.OPERATOR && !profile.getCreatedBy().getId().equals(currentUser.getId())) {
             throw new UnauthorizedException("Operators can only delete their own profiles");
         }
+
+        // Cancel dynamic schedule
+        schedulingService.cancelSchedule(id);
 
         profileRepository.delete(profile);
 
@@ -134,6 +149,8 @@ public class ProfileService {
                 .durationSeconds(profile.getDurationSeconds())
                 .port(profile.getPort())
                 .notes(profile.getNotes())
+                .cronExpression(profile.getCronExpression())
+                .scheduleEnabled(profile.getScheduleEnabled())
                 .createdByUsername(profile.getCreatedBy().getUsername())
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())

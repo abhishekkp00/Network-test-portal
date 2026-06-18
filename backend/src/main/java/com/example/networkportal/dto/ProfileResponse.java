@@ -23,6 +23,8 @@ public class ProfileResponse {
     private Integer durationSeconds;
     private Integer port;
     private String notes;
+    private String cronExpression;
+    private Boolean scheduleEnabled;
     private String createdByUsername;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

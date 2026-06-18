@@ -42,5 +42,18 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             log.info("Database already contains users. Skipping admin seeding.");
         }
+
+        if (userRepository.findByUsername("system").isEmpty()) {
+            log.info("Seeding system service user...");
+            User systemUser = User.builder()
+                    .username("system")
+                    .email("system@localhost")
+                    .passwordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                    .role(Role.ADMIN)
+                    .enabled(true)
+                    .build();
+            userRepository.save(systemUser);
+            log.info("System scheduling user created successfully.");
+        }
     }
 }

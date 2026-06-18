@@ -44,6 +44,12 @@ export const Profiles = () => {
   const [port, setPort] = useState(5201);
   const [notes, setNotes] = useState('');
 
+  // Scheduling State
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [cronPreset, setCronPreset] = useState('0 0 * * * *');
+  const [cronExpression, setCronExpression] = useState('0 0 * * * *');
+  const [isCustomCron, setIsCustomCron] = useState(false);
+
   // Overrides Fields for Triggering Job
   const [hostOverride, setHostOverride] = useState('');
   const [serverOverride, setServerOverride] = useState('');
@@ -80,6 +86,10 @@ export const Profiles = () => {
     setDurationSeconds(10);
     setPort(5201);
     setNotes('');
+    setScheduleEnabled(false);
+    setCronPreset('0 0 * * * *');
+    setCronExpression('0 0 * * * *');
+    setIsCustomCron(false);
     setIsFormOpen(true);
   };
 
@@ -94,6 +104,20 @@ export const Profiles = () => {
     setDurationSeconds(profile.durationSeconds || 10);
     setPort(profile.port || 5201);
     setNotes(profile.notes || '');
+    setScheduleEnabled(profile.scheduleEnabled || false);
+    setCronExpression(profile.cronExpression || '0 0 * * * *');
+    
+    const presets = ['0 */5 * * * *', '0 */15 * * * *', '0 0 * * * *', '0 0 */12 * * *', '0 0 0 * * *'];
+    if (profile.cronExpression && presets.includes(profile.cronExpression)) {
+      setCronPreset(profile.cronExpression);
+      setIsCustomCron(false);
+    } else if (profile.cronExpression) {
+      setCronPreset('CUSTOM');
+      setIsCustomCron(true);
+    } else {
+      setCronPreset('0 0 * * * *');
+      setIsCustomCron(false);
+    }
     setIsFormOpen(true);
   };
 
@@ -129,6 +153,14 @@ export const Profiles = () => {
       }
     }
 
+    if (scheduleEnabled) {
+      const parts = cronExpression.trim().split(/\s+/);
+      if (parts.length < 5 || parts.length > 6) {
+        setError('Invalid Cron Expression. Must be a valid standard cron expression (5 or 6 fields).');
+        return;
+      }
+    }
+
     const body = {
       name: name.trim(),
       description: description.trim(),
@@ -138,7 +170,9 @@ export const Profiles = () => {
       count: protocol === 'PING' ? parseInt(count) : null,
       durationSeconds: protocol === 'IPERF' ? parseInt(durationSeconds) : null,
       port: protocol === 'IPERF' ? parseInt(port) : null,
-      notes: notes.trim()
+      notes: notes.trim(),
+      cronExpression: scheduleEnabled ? cronExpression.trim() : null,
+      scheduleEnabled
     };
 
     try {
@@ -306,9 +340,20 @@ export const Profiles = () => {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{p.name}</h3>
-                  <span className={`badge ${p.protocol === 'PING' ? 'badge-running' : 'badge-success'}`}>
-                    {p.protocol}
-                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {p.scheduleEnabled && (
+                      <span className="badge" style={{ backgroundColor: 'var(--color-warning-glass)', color: 'var(--color-warning)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        CRON
+                      </span>
+                    )}
+                    <span className={`badge ${p.protocol === 'PING' ? 'badge-running' : 'badge-success'}`}>
+                      {p.protocol}
+                    </span>
+                  </div>
                 </div>
                 <p style={{ fontSize: '0.85rem', marginBottom: '16px', color: 'var(--text-secondary)' }}>
                   {p.description || 'No description provided.'}
@@ -321,6 +366,12 @@ export const Profiles = () => {
                       <code style={{ color: 'var(--color-info)' }}>{p.host}</code>
                       <span style={{ color: 'var(--text-muted)' }}>Pings:</span>
                       <span>{p.count} packets</span>
+                      {p.scheduleEnabled && (
+                        <>
+                          <span style={{ color: 'var(--text-muted)' }}>Schedule:</span>
+                          <span style={{ color: 'var(--color-warning)', fontSize: '0.8rem', fontFamily: 'monospace' }}>{p.cronExpression}</span>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div style={{ fontSize: '0.85rem', display: 'grid', gridTemplateColumns: '80px 1fr', gap: '4px' }}>
@@ -330,6 +381,12 @@ export const Profiles = () => {
                       <span>{p.port}</span>
                       <span style={{ color: 'var(--text-muted)' }}>Duration:</span>
                       <span>{p.durationSeconds} seconds</span>
+                      {p.scheduleEnabled && (
+                        <>
+                          <span style={{ color: 'var(--text-muted)' }}>Schedule:</span>
+                          <span style={{ color: 'var(--color-warning)', fontSize: '0.8rem', fontFamily: 'monospace' }}>{p.cronExpression}</span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -420,6 +477,65 @@ export const Profiles = () => {
                   </div>
                 </>
               )}
+
+              {/* Scheduling Config */}
+              <div className="glass-panel" style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: scheduleEnabled ? '12px' : 0 }}>
+                  <input 
+                    type="checkbox" 
+                    id="scheduleEnabled" 
+                    checked={scheduleEnabled} 
+                    onChange={e => setScheduleEnabled(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="scheduleEnabled" style={{ fontWeight: '600', cursor: 'pointer', margin: 0 }}>
+                    Enable Automated Cron Scheduling
+                  </label>
+                </div>
+
+                {scheduleEnabled && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Check Interval</label>
+                      <select 
+                        className="form-control" 
+                        value={cronPreset} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          setCronPreset(val);
+                          if (val !== 'CUSTOM') {
+                            setCronExpression(val);
+                            setIsCustomCron(false);
+                          } else {
+                            setIsCustomCron(true);
+                          }
+                        }}
+                      >
+                        <option value="0 */5 * * * *">Every 5 Minutes</option>
+                        <option value="0 */15 * * * *">Every 15 Minutes</option>
+                        <option value="0 0 * * * *">Hourly</option>
+                        <option value="0 0 */12 * * *">Every 12 Hours</option>
+                        <option value="0 0 0 * * *">Daily</option>
+                        <option value="CUSTOM">Custom Cron Expression</option>
+                      </select>
+                    </div>
+
+                    {isCustomCron && (
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Custom Cron Expression (6 fields: sec min hour day mon dow)</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          required 
+                          value={cronExpression} 
+                          onChange={e => setCronExpression(e.target.value)} 
+                          placeholder="e.g. 0 0/30 8-18 * * *" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="form-group">
                 <label className="form-label">Internal Notes</label>
