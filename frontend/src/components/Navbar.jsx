@@ -62,6 +62,12 @@ export const Navbar = () => {
             >
               Audit Logs
             </NavLink>
+            <NavLink 
+              to="/diagnostics" 
+              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+            >
+              Diagnostics
+            </NavLink>
           </>
         )}
       </nav>

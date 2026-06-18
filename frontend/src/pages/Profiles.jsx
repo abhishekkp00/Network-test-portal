@@ -2,6 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
+const validateHostOrIp = (value) => {
+  if (!value) return false;
+  const trimmed = value.trim();
+  
+  if (trimmed.length > 253) return false;
+  
+  // Reject shell metacharacters and spaces
+  const dangerousChars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r', ' ', '\t', '\'', '\"', '*', '?'];
+  for (let char of dangerousChars) {
+    if (trimmed.includes(char)) return false;
+  }
+  
+  const ipv4Regex = /^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$/;
+  const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+  const hostRegex = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/;
+  
+  return ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed) || hostRegex.test(trimmed);
+};
+
 export const Profiles = () => {
   const { user } = useAuth();
   const [profiles, setProfiles] = useState([]);
@@ -82,16 +101,44 @@ export const Profiles = () => {
     e.preventDefault();
     setError('');
 
+    // Input Sanitization & Validations
+    if (protocol === 'PING') {
+      if (!validateHostOrIp(host)) {
+        setError('Invalid Target Host. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell characters.');
+        return;
+      }
+      const countInt = parseInt(count);
+      if (isNaN(countInt) || countInt < 1 || countInt > 50) {
+        setError('Ping count must be between 1 and 50.');
+        return;
+      }
+    } else {
+      if (!validateHostOrIp(server)) {
+        setError('Invalid iPerf Server Host. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell characters.');
+        return;
+      }
+      const portInt = parseInt(port);
+      if (isNaN(portInt) || portInt < 1 || portInt > 65535) {
+        setError('Port must be between 1 and 65535.');
+        return;
+      }
+      const durationInt = parseInt(durationSeconds);
+      if (isNaN(durationInt) || durationInt < 1 || durationInt > 120) {
+        setError('Duration must be between 1 and 120 seconds.');
+        return;
+      }
+    }
+
     const body = {
-      name,
-      description,
+      name: name.trim(),
+      description: description.trim(),
       protocol,
-      host: protocol === 'PING' ? host : null,
-      server: protocol === 'IPERF' ? server : null,
+      host: protocol === 'PING' ? host.trim() : null,
+      server: protocol === 'IPERF' ? server.trim() : null,
       count: protocol === 'PING' ? parseInt(count) : null,
       durationSeconds: protocol === 'IPERF' ? parseInt(durationSeconds) : null,
       port: protocol === 'IPERF' ? parseInt(port) : null,
-      notes
+      notes: notes.trim()
     };
 
     try {
@@ -133,15 +180,55 @@ export const Profiles = () => {
     setIsTriggering(true);
     setError('');
 
+    // Input overrides Sanitization & Validations
+    if (selectedProfile.protocol === 'PING') {
+      if (hostOverride && !validateHostOrIp(hostOverride)) {
+        setError('Invalid Host Override. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell characters.');
+        setIsTriggering(false);
+        return;
+      }
+      if (countOverride) {
+        const countInt = parseInt(countOverride);
+        if (isNaN(countInt) || countInt < 1 || countInt > 50) {
+          setError('Ping count override must be between 1 and 50.');
+          setIsTriggering(false);
+          return;
+        }
+      }
+    } else {
+      if (serverOverride && !validateHostOrIp(serverOverride)) {
+        setError('Invalid Server Override. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell characters.');
+        setIsTriggering(false);
+        return;
+      }
+      if (portOverride) {
+        const portInt = parseInt(portOverride);
+        if (isNaN(portInt) || portInt < 1 || portInt > 65535) {
+          setError('Port override must be between 1 and 65535.');
+          setIsTriggering(false);
+          return;
+        }
+      }
+      if (durationSecondsOverride) {
+        const durationInt = parseInt(durationSecondsOverride);
+        if (isNaN(durationInt) || durationInt < 1 || durationInt > 120) {
+          setError('Duration override must be between 1 and 120 seconds.');
+          setIsTriggering(false);
+          return;
+        }
+      }
+    }
+
     const body = {
       profileId: selectedProfile.id,
-      hostOverride: hostOverride ? hostOverride : null,
-      serverOverride: serverOverride ? serverOverride : null,
+      hostOverride: hostOverride ? hostOverride.trim() : null,
+      serverOverride: serverOverride ? serverOverride.trim() : null,
       protocolOverride: selectedProfile.protocol,
       countOverride: countOverride ? parseInt(countOverride) : null,
       durationSecondsOverride: durationSecondsOverride ? parseInt(durationSecondsOverride) : null,
       portOverride: portOverride ? parseInt(portOverride) : null
     };
+
 
     try {
       await api.post('/jobs', body);

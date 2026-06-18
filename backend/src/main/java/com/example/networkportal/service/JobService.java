@@ -15,6 +15,8 @@ import com.example.networkportal.exception.UnauthorizedException;
 import com.example.networkportal.repository.TestJobRepository;
 import com.example.networkportal.repository.TestProfileRepository;
 import com.example.networkportal.repository.TestResultRepository;
+import com.example.networkportal.exception.BadRequestException;
+import com.example.networkportal.validation.HostOrIpValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,6 +60,9 @@ public class JobService {
         Integer duration = request.getDurationSecondsOverride() != null ? request.getDurationSecondsOverride() : profile.getDurationSeconds();
         Integer port = request.getPortOverride() != null ? request.getPortOverride() : profile.getPort();
 
+        // Validate effective parameters before scheduling execution
+        validateEffectiveParameters(protocol, host, server, count, duration, port);
+
         TestJob job = TestJob.builder()
                 .profile(profile)
                 .requestedBy(currentUser)
@@ -69,6 +74,7 @@ public class JobService {
                 .effectiveDurationSeconds(duration)
                 .effectivePort(port)
                 .build();
+
 
         jobRepository.save(job);
 
@@ -223,5 +229,34 @@ public class JobService {
                 .finishedAt(job.getFinishedAt())
                 .createdAt(job.getCreatedAt())
                 .build();
+    }
+
+    private void validateEffectiveParameters(Protocol protocol, String host, String server, Integer count, Integer duration, Integer port) {
+        HostOrIpValidator validator = new HostOrIpValidator();
+
+        if (protocol == Protocol.PING) {
+            if (host == null || host.trim().isEmpty()) {
+                throw new BadRequestException("Ping protocol requires a target host");
+            }
+            if (!validator.isValid(host, null)) {
+                throw new BadRequestException("Effective host is invalid: " + host);
+            }
+            if (count != null && (count < 1 || count > 50)) {
+                throw new BadRequestException("Effective count must be between 1 and 50");
+            }
+        } else if (protocol == Protocol.IPERF_TCP || protocol == Protocol.IPERF_UDP) {
+            if (server == null || server.trim().isEmpty()) {
+                throw new BadRequestException("iperf3 protocol requires a target server");
+            }
+            if (!validator.isValid(server, null)) {
+                throw new BadRequestException("Effective server is invalid: " + server);
+            }
+            if (duration != null && (duration < 1 || duration > 120)) {
+                throw new BadRequestException("Effective duration must be between 1 and 120 seconds");
+            }
+            if (port != null && (port < 1 || port > 65535)) {
+                throw new BadRequestException("Effective port must be between 1 and 65535");
+            }
+        }
     }
 }

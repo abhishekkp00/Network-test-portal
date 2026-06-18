@@ -9,6 +9,7 @@ import { Users } from './pages/Users';
 import { Profiles } from './pages/Profiles';
 import { Jobs } from './pages/Jobs';
 import { AuditLogs } from './pages/AuditLogs';
+import { Diagnostics } from './pages/Diagnostics';
 
 const Home = () => {
   const { user } = useAuth();
@@ -80,6 +81,19 @@ const Home = () => {
                   Inspect platform history, state changes, and operator action details.
                 </p>
               </div>
+
+              <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/diagnostics')}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-warning-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </div>
+                <h3>Diagnostics</h3>
+                <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
+                  Verify system tool access, Python integrations, and command paths.
+                </p>
+              </div>
             </>
           )}
         </div>
@@ -145,6 +159,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <AuditLogs />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/diagnostics" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <Diagnostics />
             </ProtectedRoute>
           } 
         />
