@@ -29,6 +29,10 @@ public class TestJob {
     @JoinColumn(name = "requested_by_id", nullable = false)
     private User requestedBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agent_id")
+    private Agent agent;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private JobStatus status;

@@ -48,6 +48,15 @@ export const Navbar = () => {
           Test Jobs
         </NavLink>
 
+        {['ADMIN', 'OPERATOR'].includes(user.role) && (
+          <NavLink 
+            to="/agents" 
+            className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+          >
+            Subnet Agents
+          </NavLink>
+        )}
+
         {user.role === 'ADMIN' && (
           <>
             <NavLink 

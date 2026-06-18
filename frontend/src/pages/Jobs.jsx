@@ -159,7 +159,12 @@ export const Jobs = () => {
                 jobs.map((j) => (
                   <tr key={j.id}>
                     <td>#{j.id}</td>
-                    <td style={{ fontWeight: '600' }}>{j.profileName}</td>
+                    <td>
+                      <div style={{ fontWeight: '600' }}>{j.profileName}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Node: {j.agentName || 'Local Server'}
+                      </div>
+                    </td>
                     <td>{j.requestedByUsername}</td>
                     <td>
                       <span className={`badge ${getStatusBadgeClass(j.status)}`}>

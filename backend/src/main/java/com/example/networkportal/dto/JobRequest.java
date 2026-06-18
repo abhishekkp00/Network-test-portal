@@ -32,5 +32,7 @@ public class JobRequest {
     @Min(value = 1, message = "Port override must be at least 1")
     @Max(value = 65535, message = "Port override cannot exceed 65535")
     private Integer portOverride;
+
+    private Long agentId;
 }
 

@@ -12,6 +12,8 @@ import com.example.networkportal.enums.Protocol;
 import com.example.networkportal.enums.Role;
 import com.example.networkportal.exception.ResourceNotFoundException;
 import com.example.networkportal.exception.UnauthorizedException;
+import com.example.networkportal.entity.Agent;
+import com.example.networkportal.repository.AgentRepository;
 import com.example.networkportal.repository.TestJobRepository;
 import com.example.networkportal.repository.TestProfileRepository;
 import com.example.networkportal.repository.TestResultRepository;
@@ -39,6 +41,7 @@ public class JobService {
     private final PythonWorkerExecutorService workerExecutorService;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
+    private final AgentRepository agentRepository;
 
     private JobService self;
 
@@ -64,9 +67,16 @@ public class JobService {
         // Validate effective parameters before scheduling execution
         validateEffectiveParameters(protocol, host, server, count, duration, port);
 
+        Agent agent = null;
+        if (request.getAgentId() != null) {
+            agent = agentRepository.findById(request.getAgentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Agent not found with id: " + request.getAgentId()));
+        }
+
         TestJob job = TestJob.builder()
                 .profile(profile)
                 .requestedBy(currentUser)
+                .agent(agent)
                 .status(JobStatus.PENDING)
                 .effectiveHost(host)
                 .effectiveServer(server)
@@ -119,6 +129,14 @@ public class JobService {
     }
 
     private void triggerAsyncExecution(Long jobId) {
+        TestJob initialJob = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+
+        if (initialJob.getAgent() != null) {
+            log.info("Job #{} is assigned to remote agent '{}'. Deferring execution until agent polls.", jobId, initialJob.getAgent().getName());
+            return;
+        }
+
         CompletableFuture.runAsync(() -> {
             try {
                 // Phase 1: Mark job as RUNNING in a short transaction
@@ -232,6 +250,8 @@ public class JobService {
                 .startedAt(job.getStartedAt())
                 .finishedAt(job.getFinishedAt())
                 .createdAt(job.getCreatedAt())
+                .agentId(job.getAgent() != null ? job.getAgent().getId() : null)
+                .agentName(job.getAgent() != null ? job.getAgent().getName() : "Local Server")
                 .build();
     }
 

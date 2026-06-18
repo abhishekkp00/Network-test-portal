@@ -33,6 +33,8 @@ export const Profiles = () => {
   const [isTriggerOpen, setIsTriggerOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState(null);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [availableAgents, setAvailableAgents] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState('');
 
   // Form Fields
   const [name, setName] = useState('');
@@ -94,8 +96,18 @@ export const Profiles = () => {
     }
   };
 
+  const fetchAvailableAgents = async () => {
+    try {
+      const data = await api.get('/agents');
+      setAvailableAgents(data);
+    } catch (err) {
+      console.error('Failed to load agents', err);
+    }
+  };
+
   useEffect(() => {
     fetchProfiles();
+    fetchAvailableAgents();
   }, []);
 
   const openCreateForm = () => {
@@ -229,6 +241,7 @@ export const Profiles = () => {
     setCountOverride('');
     setDurationSecondsOverride('');
     setPortOverride('');
+    setSelectedAgentId('');
     setIsTriggerOpen(true);
   };
 
@@ -283,7 +296,8 @@ export const Profiles = () => {
       protocolOverride: selectedProfile.protocol,
       countOverride: countOverride ? parseInt(countOverride) : null,
       durationSecondsOverride: durationSecondsOverride ? parseInt(durationSecondsOverride) : null,
-      portOverride: portOverride ? parseInt(portOverride) : null
+      portOverride: portOverride ? parseInt(portOverride) : null,
+      agentId: selectedAgentId ? parseInt(selectedAgentId) : null
     };
 
 
@@ -617,6 +631,18 @@ export const Profiles = () => {
                   </div>
                 </>
               )}
+
+              <div className="form-group" style={{ marginTop: '16px' }}>
+                <label className="form-label">Execution Node</label>
+                <select className="form-control" value={selectedAgentId} onChange={e => setSelectedAgentId(e.target.value)}>
+                  <option value="">Local Server (Default)</option>
+                  {availableAgents.map(agent => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name} {agent.description ? `(${agent.description})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsTriggerOpen(false)} disabled={isTriggering}>

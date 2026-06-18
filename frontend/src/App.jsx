@@ -10,6 +10,7 @@ import { Profiles } from './pages/Profiles';
 import { Jobs } from './pages/Jobs';
 import { AuditLogs } from './pages/AuditLogs';
 import { Diagnostics } from './pages/Diagnostics';
+import { Agents } from './pages/Agents';
 
 const Home = () => {
   const { user } = useAuth();
@@ -51,6 +52,21 @@ const Home = () => {
               Launch active network queries and poll status telemetry in real-time.
             </p>
           </div>
+
+          {['ADMIN', 'OPERATOR'].includes(user?.role) && (
+            <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/agents')}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-warning-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                  <line x1="4" y1="22" x2="4" y2="15" />
+                </svg>
+              </div>
+              <h3>Subnet Agents</h3>
+              <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
+                Deploy and manage remote subnet agents to verify branch connectivity.
+              </p>
+            </div>
+          )}
 
           {user?.role === 'ADMIN' && (
             <>
@@ -167,6 +183,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <Diagnostics />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/agents" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+              <Agents />
             </ProtectedRoute>
           } 
         />

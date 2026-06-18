@@ -28,4 +28,6 @@ public class JobResponse {
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;
     private LocalDateTime createdAt;
+    private Long agentId;
+    private String agentName;
 }
