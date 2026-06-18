@@ -38,6 +38,7 @@ public class JobService {
     private final TestResultRepository resultRepository;
     private final PythonWorkerExecutorService workerExecutorService;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     private JobService self;
 
@@ -202,6 +203,9 @@ public class JobService {
                 .build();
 
         resultRepository.save(result);
+
+        // Dispatch notification alerts if metrics breach thresholds
+        notificationService.checkAndNotify(result);
 
         auditLogService.log(
                 job.getRequestedBy().getUsername(),
