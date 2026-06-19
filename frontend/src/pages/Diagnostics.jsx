@@ -173,6 +173,42 @@ export const Diagnostics = () => {
             </span>
           </div>
 
+          {/* Host Resource Telemetry Gauges */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+            <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 13, 22, 0.45)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Host CPU Load</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{report.cpuUsagePct}%</span>
+              </div>
+              <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ width: `${report.cpuUsagePct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-primary) 0%, var(--color-info) 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Real-time processing core utilization.</span>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 13, 22, 0.45)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Host Memory (RAM)</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--color-warning)' }}>{report.memoryUsagePct}%</span>
+              </div>
+              <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ width: `${report.memoryUsagePct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-warning) 0%, #f97316 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Memory allocated on virtualized host.</span>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 13, 22, 0.45)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Host Disk Space</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--color-success)' }}>{report.diskUsagePct}%</span>
+              </div>
+              <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ width: `${report.diskUsagePct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-success) 0%, #22c55e 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Active partition storage capacity.</span>
+            </div>
+          </div>
+
           {/* Diagnostic Details Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
             
