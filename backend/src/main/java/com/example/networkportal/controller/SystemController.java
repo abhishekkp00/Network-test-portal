@@ -20,4 +20,9 @@ public class SystemController {
     public ResponseEntity<SystemDiagnosticService.DiagnosticReport> getSystemDiagnostics() {
         return ResponseEntity.ok(diagnosticService.performDiagnostic());
     }
+
+    @GetMapping("/stats")
+    public ResponseEntity<SystemDiagnosticService.SystemStats> getSystemStats() {
+        return ResponseEntity.ok(diagnosticService.getSystemStats());
+    }
 }

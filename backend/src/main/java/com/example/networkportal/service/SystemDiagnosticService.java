@@ -31,6 +31,15 @@ public class SystemDiagnosticService {
     @Value("${workers.python-path:python3}")
     private String pythonPath;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.networkportal.repository.TestProfileRepository profileRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.networkportal.repository.TestJobRepository jobRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.networkportal.repository.AgentRepository agentRepository;
+
     @EventListener(ApplicationReadyEvent.class)
     public void runDiagnosticOnStartup() {
         log.info("========================================================================");
@@ -257,5 +266,25 @@ public class SystemDiagnosticService {
         private int exitCode;
         private String output;
         private String stderr;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SystemStats {
+        private long profilesCount;
+        private long jobsCount;
+        private long agentsCount;
+        private String overallStatus;
+    }
+
+    public SystemStats getSystemStats() {
+        return SystemStats.builder()
+                .profilesCount(profileRepository.count())
+                .jobsCount(jobRepository.count())
+                .agentsCount(agentRepository.count())
+                .overallStatus(performDiagnostic().getOverallStatus())
+                .build();
     }
 }

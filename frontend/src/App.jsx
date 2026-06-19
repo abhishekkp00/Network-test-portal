@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
@@ -15,6 +15,30 @@ import { Agents } from './pages/Agents';
 const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ profilesCount: 0, jobsCount: 0, agentsCount: 0, overallStatus: 'SUCCESS' });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/v1/system/stats', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch system stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   return (
     <div className="container">
@@ -22,9 +46,45 @@ const Home = () => {
         <h1 style={{ marginBottom: '16px', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '2.5rem' }}>
           Network Test Automation Portal
         </h1>
-        <p style={{ maxWidth: '650px', margin: '0 auto 32px', fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+        <p style={{ maxWidth: '650px', margin: '0 auto 36px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.65' }}>
           Welcome back, <strong style={{ color: 'var(--text-primary)' }}>{user?.username}</strong>! Select an operational panel below to configure test execution scripts, schedule diagnostics, or review audit trails.
         </p>
+
+        {/* Dynamic System Stats KPIs */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', marginBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ minWidth: '100px' }}>
+            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--color-primary)', letterSpacing: '-0.02em' }}>
+              {loading ? '...' : stats.profilesCount}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Profiles</div>
+          </div>
+          <div style={{ width: '1px', background: 'var(--border-glass)', height: '36px' }}></div>
+          <div style={{ minWidth: '100px' }}>
+            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--color-info)', letterSpacing: '-0.02em' }}>
+              {loading ? '...' : stats.jobsCount}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Jobs Executed</div>
+          </div>
+          <div style={{ width: '1px', background: 'var(--border-glass)', height: '36px' }}></div>
+          <div style={{ minWidth: '100px' }}>
+            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--color-warning)', letterSpacing: '-0.02em' }}>
+              {loading ? '...' : stats.agentsCount}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Active Agents</div>
+          </div>
+          <div style={{ width: '1px', background: 'var(--border-glass)', height: '36px' }}></div>
+          <div style={{ minWidth: '100px' }}>
+            <div style={{ 
+              fontSize: '2.2rem', 
+              fontWeight: '800', 
+              color: stats.overallStatus === 'SUCCESS' ? 'var(--color-success)' : 'var(--color-danger)', 
+              letterSpacing: '-0.02em'
+            }}>
+              {loading ? '...' : (stats.overallStatus === 'SUCCESS' ? 'HEALTHY' : 'DEGRADED')}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Orchestrator</div>
+          </div>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px', marginTop: '20px' }}>
           <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/profiles')}>
