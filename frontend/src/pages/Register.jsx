@@ -7,6 +7,7 @@ export const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState('VIEWER');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,7 +35,7 @@ export const Register = () => {
 
     setSubmitting(true);
     try {
-      await register(username, email, password);
+      await register(username, email, password, role);
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'Registration failed. Try a different username/email.');
@@ -125,7 +126,7 @@ export const Register = () => {
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '28px' }}>
+          <div className="form-group" style={{ marginBottom: '20px' }}>
             <label className="form-label">Confirm Password</label>
             <input 
               type="password" 
@@ -136,6 +137,21 @@ export const Register = () => {
               disabled={submitting}
               autoComplete="new-password"
             />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: '28px' }}>
+            <label className="form-label">Requested Account Role</label>
+            <select
+              className="form-control"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              disabled={submitting}
+              style={{ background: 'rgba(10, 13, 22, 0.8)', color: 'var(--text-primary)', borderColor: 'var(--border-glass)' }}
+            >
+              <option value="VIEWER">VIEWER (Read-only access)</option>
+              <option value="OPERATOR">OPERATOR (Create profiles, run tests)</option>
+              <option value="ADMIN">ADMIN (Full management access)</option>
+            </select>
           </div>
 
           <button 

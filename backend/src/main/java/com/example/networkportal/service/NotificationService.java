@@ -36,6 +36,13 @@ public class NotificationService {
     public void checkAndNotify(TestResult result) {
         if (result == null) return;
 
+        log.info("[Alert Verification] Job #{}: Latency={} ms (Threshold={} ms) | Packet Loss={}% (Threshold={}%). Checking alert triggers...",
+                result.getTestJob().getId(),
+                result.getRttAvgMs() != null ? result.getRttAvgMs() : "N/A",
+                latencyThresholdMs,
+                result.getPacketLossPct() != null ? result.getPacketLossPct() : "N/A",
+                packetLossThresholdPct);
+
         boolean highLoss = result.getPacketLossPct() != null && result.getPacketLossPct() > packetLossThresholdPct;
         boolean highLatency = result.getRttAvgMs() != null && result.getRttAvgMs() > latencyThresholdMs;
 

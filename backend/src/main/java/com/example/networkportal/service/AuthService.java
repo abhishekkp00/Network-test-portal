@@ -36,8 +36,17 @@ public class AuthService {
             throw new BadRequestException("Email is already taken");
         }
 
-        // First registered user gets ADMIN for setup purposes; subsequent users get VIEWER
-        Role role = userRepository.count() == 0 ? Role.ADMIN : Role.VIEWER;
+        // Assign requested role if provided; fallback to ADMIN for first user, otherwise VIEWER
+        Role role = Role.VIEWER;
+        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
+            try {
+                role = Role.valueOf(request.getRole().toUpperCase().trim());
+            } catch (IllegalArgumentException e) {
+                role = Role.VIEWER;
+            }
+        } else if (userRepository.count() == 0) {
+            role = Role.ADMIN;
+        }
 
         User user = User.builder()
                 .username(request.getUsername())

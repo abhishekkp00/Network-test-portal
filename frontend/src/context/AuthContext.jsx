@@ -52,10 +52,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, role) => {
     setLoading(true);
     try {
-      const data = await api.post('/auth/register', { username, email, password });
+      const data = await api.post('/auth/register', { username, email, password, role });
       localStorage.setItem('token', data.token);
       
       // Fetch fresh profile details
