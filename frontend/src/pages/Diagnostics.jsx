@@ -1,10 +1,75 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 
 export const Diagnostics = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Interactive Live Console State
+  const [liveHost, setLiveHost] = useState('8.8.8.8');
+  const [liveProtocol, setLiveProtocol] = useState('PING');
+  const [liveCount, setLiveCount] = useState(5);
+  const [terminalLines, setTerminalLines] = useState([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const eventSourceRef = useRef(null);
+  const terminalEndRef = useRef(null);
+
+  // Auto-scroll terminal
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [terminalLines]);
+
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
+
+  const startLiveTest = () => {
+    if (!liveHost.trim()) {
+      alert("Destination host cannot be empty.");
+      return;
+    }
+    setTerminalLines(["[System] Starting live connection to " + liveHost + " via " + liveProtocol + "..."]);
+    setIsRunning(true);
+
+    const token = localStorage.getItem('token');
+    // Call the Spring SSE streaming API
+    const url = `http://localhost:8082/api/v1/diagnostics/live-stream?host=${encodeURIComponent(liveHost.trim())}&protocol=${liveProtocol}&count=${liveCount}&token=${encodeURIComponent(token)}`;
+
+    const es = new EventSource(url);
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      setTerminalLines((prev) => [...prev, event.data]);
+    };
+
+    es.addEventListener('exit', (event) => {
+      setTerminalLines((prev) => [...prev, `\n[Process completed with exit code: ${event.data}]`]);
+      es.close();
+      setIsRunning(false);
+    });
+
+    es.addEventListener('error', (event) => {
+      setTerminalLines((prev) => [...prev, `\n[Connection closed or failed to reach host]`]);
+      es.close();
+      setIsRunning(false);
+    });
+  };
+
+  const stopLiveTest = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setTerminalLines((prev) => [...prev, `\n[Process manually terminated by user]`]);
+    setIsRunning(false);
+  };
 
   const fetchDiagnostics = async () => {
     setLoading(true);
@@ -221,6 +286,123 @@ export const Diagnostics = () => {
               </div>
             </div>
 
+          </div>
+
+          {/* INTERACTIVE LIVE TERMINAL SECTION */}
+          <div className="glass-panel" style={{ marginTop: '35px', padding: '30px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ margin: '0 0 6px 0', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.6rem' }}>
+                Interactive Live Console
+              </h2>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Execute live network probes directly from the core server sub-interfaces. Streams stdout output line-by-line using Server-Sent Events (SSE).
+              </p>
+            </div>
+
+            {/* Form Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px', alignItems: 'end' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem' }}>Destination Host / IP</label>
+                <input 
+                  type="text" 
+                  className="form-control"
+                  value={liveHost}
+                  onChange={(e) => setLiveHost(e.target.value)}
+                  placeholder="e.g. 8.8.8.8"
+                  disabled={isRunning}
+                  style={{ background: 'rgba(10, 13, 22, 0.8)', borderColor: 'var(--border-glass)' }}
+                />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.75rem' }}>Protocol / Tool</label>
+                <select
+                  className="form-control"
+                  value={liveProtocol}
+                  onChange={(e) => setLiveProtocol(e.target.value)}
+                  disabled={isRunning}
+                  style={{ background: 'rgba(10, 13, 22, 0.8)', color: 'var(--text-primary)', borderColor: 'var(--border-glass)' }}
+                >
+                  <option value="PING">PING (ICMP Latency check)</option>
+                  <option value="TRACEPATH">TRACEPATH (Network path routing)</option>
+                </select>
+              </div>
+
+              {liveProtocol === 'PING' && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Packet Count</label>
+                  <select
+                    className="form-control"
+                    value={liveCount}
+                    onChange={(e) => setLiveCount(parseInt(e.target.value))}
+                    disabled={isRunning}
+                    style={{ background: 'rgba(10, 13, 22, 0.8)', color: 'var(--text-primary)', borderColor: 'var(--border-glass)' }}
+                  >
+                    <option value="3">3 Packets</option>
+                    <option value="5">5 Packets</option>
+                    <option value="10">10 Packets</option>
+                    <option value="15">15 Packets</option>
+                  </select>
+                </div>
+              )}
+
+              <div>
+                {isRunning ? (
+                  <button className="btn btn-danger" onClick={stopLiveTest} style={{ width: '100%', padding: '10px' }}>
+                    Stop Execution
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" onClick={startLiveTest} style={{ width: '100%', padding: '10px' }}>
+                    Start Live Test
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Glowing Live Terminal */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {isRunning && <span className="spinner" style={{ width: '10px', height: '10px', borderWidth: '1.5px' }}></span>}
+                  Live Console Stdout
+                </span>
+                {terminalLines.length > 0 && (
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => setTerminalLines([])}
+                    style={{ padding: '2px 8px', fontSize: '0.7rem' }}
+                    disabled={isRunning}
+                  >
+                    Clear Console
+                  </button>
+                )}
+              </div>
+              <div 
+                style={{ 
+                  padding: '18px', 
+                  backgroundColor: '#030508', 
+                  border: '1px solid rgba(34, 197, 94, 0.25)', 
+                  borderRadius: 'var(--radius-sm)', 
+                  fontFamily: 'var(--font-mono)', 
+                  fontSize: '0.8rem', 
+                  color: '#4ade80', 
+                  minHeight: '260px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.8)'
+                }}
+              >
+                {terminalLines.length === 0 ? (
+                  <span style={{ color: '#4b5563' }}>Console inactive. Select a target and click "Start Live Test" to watch real-time stream.</span>
+                ) : (
+                  terminalLines.map((line, idx) => (
+                    <div key={idx}>{line}</div>
+                  ))
+                )}
+                <div ref={terminalEndRef} />
+              </div>
+            </div>
           </div>
         </>
       )}
