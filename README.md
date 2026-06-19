@@ -8,11 +8,13 @@ A production-grade, secure orchestration portal designed to coordinate distribut
 
 * **Distributed Edge Polling Architecture**: Remote agents run as lightweight Python processes within isolated subnets. Instead of exposing subnets via inbound firewall ports, agents securely poll the central controller outbound using UUID-based headers (`X-Agent-Token`).
 * **🌐 NOC Subnet Topology Map**: A real-time visual NOC (Network Operations Center) board in the frontend displaying active connections, pulsing controller states, and live CSS packet stream animations representing active polling.
+* **🖥️ Host Diagnostics & Real-time Telemetry**: Active background diagnostics monitors host platform resources (CPU, RAM, and Disk space utilization) and local utility availability (ping/iperf3 binaries) using Java Management APIs.
+* **✨ Premium Glassmorphic Design System**: Custom tailored styles using **Plus Jakarta Sans** typography, cubic-bezier hover micro-animations, glass-morphism panels, and split-screen branding login/signup cards with interactive explanation modals.
+* **📊 Home Dashboard KPI Stats**: Real-time counter row on the welcome dashboard loading active profile counts, scheduled job executions, registered branch agents, and direct system health checks.
 * **🛡️ Command Injection Protection**: Deep parameter sanitization combined with custom Spring JSR-380 validators (`@HostOrIp`) ensuring that user-provided test inputs cannot trigger shell code execution vulnerabilities on local or remote runners.
+* **🔑 Secured Signup & Role Protections (RBAC)**: Strong login/signup form input regex validations (username formatting, RFC emails, password complexity). Strictly defaults all subsequent user registrations to the `VIEWER` role on the database level to prevent privilege escalation attacks.
 * **⏰ Dynamic Cron Scheduling**: Set automated execution schedules (e.g., hourly pings or daily throughput checks) per profile using standard Spring Scheduler cron triggers, dynamically controlled via the UI.
 * **🚨 Multi-Channel Alerting**: Instant alerting dispatch to **Slack** and **Discord** webhooks if latency or packet loss breaches defined thresholds, with internal console-based SMTP warnings.
-* **📊 Historical Trends & Charts**: Pop-over timelines utilizing **Recharts** to display latency (min/avg/max) and packet loss metrics over time, helping administrators spot network degradation trends.
-* **🔑 Role-Based Access Controls (RBAC)**: Secure access restricted via JWT stateless authentication. Roles include `ADMIN` (full access), `OPERATOR` (run tests/view results), and `VIEWER` (read-only charts).
 * **📝 Security Audit Trails**: All structural or administrative modifications (user role edits, agent token generation, manually triggered runs) are recorded in a permanent audit log database.
 
 ---
