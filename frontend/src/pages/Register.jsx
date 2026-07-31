@@ -7,7 +7,6 @@ export const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('VIEWER');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -18,8 +17,35 @@ export const Register = () => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim() || !email.trim() || !password.trim()) {
+    // Client-side validations
+    if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
       setError('All fields are required.');
+      return;
+    }
+
+    // Username: 3 to 20 chars, alphanumeric + underscores
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      setError('Username must be 3-20 characters long and contain only letters, numbers, or underscores.');
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    // Password complexity: >= 6 chars, 1 upper, 1 lower, 1 digit
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password must contain at least one uppercase letter, one lowercase letter, and one digit.');
       return;
     }
 
@@ -28,14 +54,10 @@ export const Register = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      await register(username, email, password, role);
+      // All registrations strictly default to VIEWER on the backend to avoid privilege escalation
+      await register(username, email, password, 'VIEWER');
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'Registration failed. Try a different username/email.');
@@ -45,28 +67,56 @@ export const Register = () => {
   };
 
   return (
-    <div className="container" style={{ display: 'flex', justifyContent: 'center', padding: '60px 20px', alignItems: 'center' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '440px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+    <div className="container" style={{ display: 'flex', minHeight: '82vh', alignItems: 'center', justifyContent: 'space-between', gap: '60px', padding: '60px 20px', flexWrap: 'wrap' }}>
+      
+      {/* Left Column - Application Identity */}
+      <div style={{ flex: '1 1 480px', minWidth: '320px', paddingRight: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <svg 
-            width="40" 
-            height="40" 
+            width="44" 
+            height="44" 
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="var(--color-primary)" 
             strokeWidth="2.5" 
             strokeLinecap="round" 
             strokeLinejoin="round"
-            style={{ marginBottom: '12px' }}
           >
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="8.5" cy="7" r="4" />
-            <line x1="20" y1="8" x2="20" y2="14" />
-            <line x1="23" y1="11" x2="17" y2="11" />
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
           </svg>
-          <h2 style={{ fontSize: '1.75rem', marginBottom: '8px' }}>Create Account</h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            Register to join the monitoring dashboard
+          <span style={{ fontSize: '1.65rem', fontWeight: '800', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.04em' }}>
+            Test Portal 2026
+          </span>
+        </div>
+        
+        <h1 style={{ fontSize: '2.8rem', fontWeight: '800', lineHeight: '1.18', marginBottom: '22px', letterSpacing: '-0.04em', background: 'linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Distributed Network Performance Diagnostics.
+        </h1>
+        
+        <p style={{ fontSize: '1.02rem', color: 'var(--text-secondary)', lineHeight: '1.68', marginBottom: '34px', maxWidth: '520px' }}>
+          Orchestrate remote ICMP latency, path hops, and bandwidth throughput jobs across multiple subnets. Inspect live streaming terminals and set up Slack or Discord notifications for immediate outage response.
+        </p>
+      </div>
+
+      {/* Right Column - Translucent Glass Registration Block */}
+      <div 
+        className="glass-panel" 
+        style={{ 
+          flex: '0 1 450px', 
+          width: '100%',
+          minWidth: '320px',
+          padding: '40px',
+          background: 'rgba(12, 17, 34, 0.4)', 
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)'
+        }}
+      >
+        <div style={{ marginBottom: '24px', textAlign: 'left' }}>
+          <h2 style={{ fontSize: '1.6rem', marginBottom: '8px', fontWeight: '700' }}>Create Account</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Register to join the monitoring dashboard.
           </p>
         </div>
 
@@ -88,7 +138,7 @@ export const Register = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Username</label>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Username</label>
             <input 
               type="text" 
               className="form-control"
@@ -97,11 +147,12 @@ export const Register = () => {
               placeholder="e.g. operator_john"
               disabled={submitting}
               autoComplete="username"
+              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email Address</label>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Email Address</label>
             <input 
               type="email" 
               className="form-control"
@@ -110,24 +161,26 @@ export const Register = () => {
               placeholder="john@example.com"
               disabled={submitting}
               autoComplete="email"
+              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Password</label>
             <input 
               type="password" 
               className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 characters"
+              placeholder="Min. 6 chars (A-Z, a-z, 0-9)"
               disabled={submitting}
               autoComplete="new-password"
+              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label className="form-label">Confirm Password</label>
+          <div className="form-group" style={{ marginBottom: '24px' }}>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Confirm Password</label>
             <input 
               type="password" 
               className="form-control"
@@ -136,23 +189,13 @@ export const Register = () => {
               placeholder="Re-enter password"
               disabled={submitting}
               autoComplete="new-password"
+              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '28px' }}>
-            <label className="form-label">Requested Account Role</label>
-            <select
-              className="form-control"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              disabled={submitting}
-              style={{ background: 'rgba(10, 13, 22, 0.8)', color: 'var(--text-primary)', borderColor: 'var(--border-glass)' }}
-            >
-              <option value="VIEWER">VIEWER (Read-only access)</option>
-              <option value="OPERATOR">OPERATOR (Create profiles, run tests)</option>
-              <option value="ADMIN">ADMIN (Full management access)</option>
-            </select>
-          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '24px' }}>
+            ℹ️ New registrations default to the <strong>VIEWER</strong> role. Contact an Administrator to request elevation to <strong>OPERATOR</strong> or <strong>ADMIN</strong>.
+          </p>
 
           <button 
             type="submit" 
@@ -161,7 +204,7 @@ export const Register = () => {
             disabled={submitting}
           >
             {submitting ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                 <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
                 <span>Creating account...</span>
               </div>
@@ -173,12 +216,14 @@ export const Register = () => {
 
         <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '500' }}>
+          <Link to="/login" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '600' }}>
             Sign In
           </Link>
         </div>
       </div>
+
     </div>
   );
 };
+
 export default Register;
