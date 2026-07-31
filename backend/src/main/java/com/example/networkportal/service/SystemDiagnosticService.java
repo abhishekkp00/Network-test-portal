@@ -46,7 +46,9 @@ public class SystemDiagnosticService {
         log.info("      STARTING SYSTEM INTEGRITY AND EXECUTION CHECK (NETWORK PORTAL)    ");
         log.info("========================================================================");
 
+        // Run once at startup — result is both logged AND cached for the stats endpoint
         DiagnosticReport report = performDiagnostic();
+        cachedOverallStatus = report.getOverallStatus();
 
         log.info("Diagnostic Timestamp: {}", report.getTimestamp());
         log.info("Python Command [{}]: {} ({})", pythonPath, report.getPythonStatus(), report.getPythonDetails());
@@ -56,7 +58,7 @@ public class SystemDiagnosticService {
         log.info("System iperf3 Utility: {} ({})", report.getIperfBinaryStatus(), report.getIperfBinaryDetails());
         log.info("------------------------------------------------------------------------");
 
-        if ("SUCCESS".equals(report.getOverallStatus())) {
+        if ("SUCCESS".equals(cachedOverallStatus)) {
             log.info(">>> SYSTEM STATUS: HEALTHY (All network test orchestrations are ready) <<<");
         } else {
             log.warn(">>> SYSTEM STATUS: DEGRADED (Some integration checks failed! Review logs) <<<");
@@ -279,12 +281,27 @@ public class SystemDiagnosticService {
         private String overallStatus;
     }
 
+    /**
+     * Cached result of the last diagnostic run. Populated at startup and updated
+     * whenever an explicit diagnostic is requested via the admin endpoint.
+     * PERF FIX: getSystemStats() used to call performDiagnostic() which spawns
+     * OS processes (python3, ping, iperf3) on every dashboard load — very expensive.
+     * Now uses this cached value instead.
+     */
+    private volatile String cachedOverallStatus = "UNKNOWN";
+
+    public String refreshDiagnosticCache() {
+        cachedOverallStatus = performDiagnostic().getOverallStatus();
+        return cachedOverallStatus;
+    }
+
     public SystemStats getSystemStats() {
         return SystemStats.builder()
                 .profilesCount(profileRepository.count())
                 .jobsCount(jobRepository.count())
                 .agentsCount(agentRepository.count())
-                .overallStatus(performDiagnostic().getOverallStatus())
+                // Use cached status — does NOT run OS commands on every request
+                .overallStatus(cachedOverallStatus)
                 .build();
     }
 }
