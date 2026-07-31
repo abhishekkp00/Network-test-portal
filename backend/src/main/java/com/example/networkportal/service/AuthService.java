@@ -36,15 +36,10 @@ public class AuthService {
             throw new BadRequestException("Email is already taken");
         }
 
-        // Assign requested role if provided; fallback to ADMIN for first user, otherwise VIEWER
+        // Assign ADMIN for the first user to seed the portal, otherwise strictly default to VIEWER.
+        // Role elevation for subsequent users must be performed by an existing Administrator.
         Role role = Role.VIEWER;
-        if (request.getRole() != null && !request.getRole().trim().isEmpty()) {
-            try {
-                role = Role.valueOf(request.getRole().toUpperCase().trim());
-            } catch (IllegalArgumentException e) {
-                role = Role.VIEWER;
-            }
-        } else if (userRepository.count() == 0) {
+        if (userRepository.count() == 0) {
             role = Role.ADMIN;
         }
 
