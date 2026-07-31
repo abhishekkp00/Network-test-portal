@@ -1,6 +1,7 @@
 package com.example.networkportal.service;
 
 import com.example.networkportal.entity.TestResult;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -14,23 +15,29 @@ import java.util.Map;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class NotificationService {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    /**
+     * FIX: Inject the shared RestTemplate @Bean from ApplicationConfig
+     * instead of creating a new RestTemplate() inline. Using a Spring-managed
+     * bean enables proper connection pool reuse and future interceptor support.
+     */
+    private final RestTemplate restTemplate;
 
-    @Value("${ALERTS_SLACK_WEBHOOK_URL:}")
+    @Value("${alerts.slack-webhook-url:}")
     private String slackWebhookUrl;
 
-    @Value("${ALERTS_DISCORD_WEBHOOK_URL:}")
+    @Value("${alerts.discord-webhook-url:}")
     private String discordWebhookUrl;
 
-    @Value("${ALERTS_EMAIL_RECIPIENT:}")
+    @Value("${alerts.email-recipient:}")
     private String emailRecipient;
 
-    @Value("${ALERTS_LATENCY_THRESHOLD_MS:100.0}")
+    @Value("${alerts.latency-threshold-ms:100.0}")
     private double latencyThresholdMs;
 
-    @Value("${ALERTS_PACKET_LOSS_THRESHOLD_PCT:5.0}")
+    @Value("${alerts.packet-loss-threshold-pct:5.0}")
     private double packetLossThresholdPct;
 
     public void checkAndNotify(TestResult result) {
