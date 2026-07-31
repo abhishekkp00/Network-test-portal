@@ -21,16 +21,11 @@ export const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return (
-      <div className="container" style={{ textAlign: 'center', marginTop: '100px' }}>
-        <div className="glass-panel" style={{ maxWidth: '500px', margin: '0 auto', borderColor: 'var(--color-danger)' }}>
-          <h2 style={{ color: 'var(--color-danger)' }}>Access Denied</h2>
-          <p>Your account role (<strong>{user.role}</strong>) does not have access to view this resource.</p>
-          <Navigate to="/" replace />
-        </div>
-      </div>
-    );
+    // BUG FIX: previously rendered <Navigate> inside a <div> which is a no-op.
+    // Navigate must be the *returned* element to trigger routing.
+    return <Navigate to="/" replace />;
   }
 
   return children;
 };
+
