@@ -44,7 +44,7 @@ public class ProfileController {
             @Valid @RequestBody ProfileRequest request,
             @AuthenticationPrincipal User currentUser
     ) {
-        return ResponseEntity.ok(profileService.updateProfile(id, request, currentUser));
+        return ResponseEntity.ok(profileService.updateProfile(id, request,currentUser));
     }
 
     @DeleteMapping("/{id}")
