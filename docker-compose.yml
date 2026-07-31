@@ -15,6 +15,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - network-test-net
+    # Wait until Postgres is actually accepting connections before starting backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SPRING_DATASOURCE_USERNAME} -d ${SPRING_DATASOURCE_DB:-network_portal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
@@ -34,11 +41,21 @@ services:
       - APP_SECURITY_DEFAULT_ADMIN_EMAIL=${APP_SECURITY_DEFAULT_ADMIN_EMAIL:-admin@example.com}
       - APP_SECURITY_DEFAULT_ADMIN_PASSWORD=${APP_SECURITY_DEFAULT_ADMIN_PASSWORD}
       - WORKERS_PYTHON_PATH=python3
-      - WORKERS_PING_SCRIPT_PATH=../python-workers/ping_worker.py
-      - WORKERS_IPERF_SCRIPT_PATH=../python-workers/iperf_worker.py
+      # CRITICAL FIX: Use container-local paths where the scripts are mounted via volume below
+      - WORKERS_PING_SCRIPT_PATH=/app/python-workers/ping_worker.py
+      - WORKERS_IPERF_SCRIPT_PATH=/app/python-workers/iperf_worker.py
       - WORKERS_TIMEOUT_SECONDS=30
+      - ALERTS_SLACK_WEBHOOK_URL=${ALERTS_SLACK_WEBHOOK_URL:-}
+      - ALERTS_DISCORD_WEBHOOK_URL=${ALERTS_DISCORD_WEBHOOK_URL:-}
+      - ALERTS_EMAIL_RECIPIENT=${ALERTS_EMAIL_RECIPIENT:-}
+      - ALERTS_LATENCY_THRESHOLD_MS=${ALERTS_LATENCY_THRESHOLD_MS:-100.0}
+      - ALERTS_PACKET_LOSS_THRESHOLD_PCT=${ALERTS_PACKET_LOSS_THRESHOLD_PCT:-5.0}
+    volumes:
+      # Mount the python-workers directory into the backend container so scripts are accessible
+      - ./python-workers:/app/python-workers:ro
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - network-test-net
 
