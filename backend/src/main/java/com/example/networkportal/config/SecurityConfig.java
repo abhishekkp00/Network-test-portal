@@ -85,11 +85,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // SECURITY FIX: Do NOT use List.of("*") — it is incompatible with
-        // credentials and allows any origin in production. Use explicit origins.
-        configuration.setAllowedOrigins(allowedOrigins);
+        // Allow explicit origins from properties as well as patterns for local dev/Docker ports (8080, 8082, 8083, 5173, etc.)
+        configuration.setAllowedOriginPatterns(List.of(
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "http://localhost",
+            "http://127.0.0.1"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-Agent-Token"));
         configuration.setExposedHeaders(List.of("Authorization"));
         // Allow cookies/credentials if needed by future SSE or cookie-based auth
         configuration.setAllowCredentials(true);
