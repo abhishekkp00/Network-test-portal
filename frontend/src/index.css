@@ -384,3 +384,23 @@ p {
   border-radius: 50%;
   box-shadow: 0 0 6px var(--phosphor-green);
 }
+
+/* Subtle CRT Scanline overlay */
+.crt-scanlines {
+  position: relative;
+}
+.crt-scanlines::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 3px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.12;
+}
+
