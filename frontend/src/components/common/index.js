@@ -3,3 +3,4 @@ export { default as MetricReadout } from './MetricReadout';
 export { default as StatusIndicator } from './StatusIndicator';
 export { default as RetroButton } from './RetroButton';
 export { default as SectionHeader } from './SectionHeader';
+export { default as TerminalOutput } from './TerminalOutput';

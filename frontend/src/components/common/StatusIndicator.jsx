@@ -2,9 +2,16 @@ import React from 'react';
 
 /**
  * StatusIndicator - Technical status indicator LED / bracket tag for NOC states.
- * States: ONLINE, DEGRADED, OFFLINE, PENDING, RUNNING, SUCCESS, FAILED, STALE
+ * States: ONLINE, DEGRADED, OFFLINE, PENDING, RUNNING, SUCCESS, FAILED, TIMEOUT, STALE
  */
-export const StatusIndicator = ({ status, text, size = 'sm', pulse = true, className = '' }) => {
+export const StatusIndicator = ({
+  status,
+  text,
+  size = 'sm',
+  pulse = true,
+  variant = 'badge', // 'badge' | 'dot'
+  className = ''
+}) => {
   const normalizeStatus = (status || '').toString().toUpperCase();
 
   const configMap = {
@@ -38,6 +45,20 @@ export const StatusIndicator = ({ status, text, size = 'sm', pulse = true, class
   };
 
   const displayText = text || style.label;
+
+  if (variant === 'dot') {
+    return (
+      <span className={`inline-flex items-center gap-1.5 font-mono text-xs font-semibold ${style.color} select-none ${className}`}>
+        <span className="relative flex h-2 w-2 items-center justify-center">
+          {pulse && ['RUNNING', 'PENDING'].includes(normalizeStatus) && (
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${style.bg}`} />
+          )}
+          <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${style.bg}`} />
+        </span>
+        <span>{displayText}</span>
+      </span>
+    );
+  }
 
   return (
     <span
