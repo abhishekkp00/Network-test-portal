@@ -22,18 +22,20 @@ export const Dashboard = () => {
   const [agents, setAgents] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [incidents, setIncidents] = useState([]);
+  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const fetchDashboardData = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes] = await Promise.allSettled([
+      const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes, resultsRes] = await Promise.allSettled([
         api.get('/system/stats'),
         api.get('/jobs'),
         api.get('/agents'),
         api.get('/profiles'),
-        api.get('/incidents')
+        api.get('/incidents'),
+        api.get('/results')
       ]);
 
       if (statsRes.status === 'fulfilled') setStats(statsRes.value);
@@ -41,6 +43,7 @@ export const Dashboard = () => {
       if (agentsRes.status === 'fulfilled') setAgents(agentsRes.value || []);
       if (profilesRes.status === 'fulfilled') setProfiles(profilesRes.value || []);
       if (incidentsRes.status === 'fulfilled') setIncidents(incidentsRes.value || []);
+      if (resultsRes.status === 'fulfilled') setResults(resultsRes.value || []);
 
       setError('');
     } catch (err) {
@@ -54,12 +57,13 @@ export const Dashboard = () => {
     let isMounted = true;
     const loadInitial = async () => {
       try {
-        const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes] = await Promise.allSettled([
+        const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes, resultsRes] = await Promise.allSettled([
           api.get('/system/stats'),
           api.get('/jobs'),
           api.get('/agents'),
           api.get('/profiles'),
-          api.get('/incidents')
+          api.get('/incidents'),
+          api.get('/results')
         ]);
         if (!isMounted) return;
         if (statsRes.status === 'fulfilled') setStats(statsRes.value);
@@ -67,6 +71,7 @@ export const Dashboard = () => {
         if (agentsRes.status === 'fulfilled') setAgents(agentsRes.value || []);
         if (profilesRes.status === 'fulfilled') setProfiles(profilesRes.value || []);
         if (incidentsRes.status === 'fulfilled') setIncidents(incidentsRes.value || []);
+        if (resultsRes.status === 'fulfilled') setResults(resultsRes.value || []);
         setError('');
       } catch (err) {
         if (isMounted) setError(err.message || 'Failed to fetch NOC dashboard telemetry.');
@@ -94,6 +99,19 @@ export const Dashboard = () => {
   const finishedJobs = jobs.filter(j => ['SUCCESS', 'FAILED', 'TIMEOUT', 'STALE'].includes(j.status));
   const successJobs = jobs.filter(j => j.status === 'SUCCESS').length;
   const successRate = finishedJobs.length > 0 ? Math.round((successJobs / finishedJobs.length) * 100) : null;
+
+  // Real telemetry metrics from TestResult records
+  const validRttResults = results.filter(r => r.rttAvgMs !== null && r.rttAvgMs !== undefined);
+  const avgRttValue = validRttResults.length > 0
+    ? Math.round((validRttResults.reduce((acc, r) => acc + r.rttAvgMs, 0) / validRttResults.length) * 10) / 10
+    : null;
+  const avgRttText = avgRttValue !== null ? `${avgRttValue} ms` : 'N/A';
+
+  const validLossResults = results.filter(r => r.packetLossPct !== null && r.packetLossPct !== undefined);
+  const avgLossValue = validLossResults.length > 0
+    ? Math.round((validLossResults.reduce((acc, r) => acc + r.packetLossPct, 0) / validLossResults.length) * 10) / 10
+    : null;
+  const avgLossText = avgLossValue !== null ? `${avgLossValue}%` : 'N/A';
 
   // Active Incidents directly from incidents telemetry (separate from job status)
   const activeIncidents = incidents;
@@ -184,18 +202,18 @@ export const Dashboard = () => {
 
         <MetricReadout
           label="AVERAGE RTT"
-          value="N/A"
-          status="neutral"
+          value={avgRttText}
+          status={avgRttValue !== null ? 'cyan' : 'neutral'}
           icon={Terminal}
-          subtext="No Stream Metric"
+          subtext={validRttResults.length > 0 ? `${validRttResults.length} RTT Probes` : 'No RTT Data'}
         />
 
         <MetricReadout
           label="PACKET LOSS"
-          value="N/A"
-          status="neutral"
+          value={avgLossText}
+          status={avgLossValue !== null ? (avgLossValue > 0 ? 'red' : 'green') : 'neutral'}
           icon={AlertTriangle}
-          subtext="No Stream Metric"
+          subtext={validLossResults.length > 0 ? `${validLossResults.length} Loss Probes` : 'No Loss Data'}
         />
 
         <MetricReadout

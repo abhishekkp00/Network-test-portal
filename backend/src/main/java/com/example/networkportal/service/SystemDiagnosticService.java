@@ -161,7 +161,7 @@ public class SystemDiagnosticService {
         }
 
         // 6. Gather Host Live Telemetry (CPU, Memory, Disk)
-        double cpuLoad = 0.0;
+        Double cpuLoad = null;
         try {
             java.lang.management.OperatingSystemMXBean osBean = java.lang.management.ManagementFactory.getOperatingSystemMXBean();
             if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
@@ -173,9 +173,9 @@ public class SystemDiagnosticService {
         } catch (Exception e) {
             log.warn("Could not retrieve host CPU load: {}", e.getMessage());
         }
-        report.setCpuUsagePct(cpuLoad > 0 ? cpuLoad : 1.2); // Fallback to minimal load if unreadable
+        report.setCpuUsagePct(cpuLoad);
 
-        double memUsage = 0.0;
+        Double memUsage = null;
         try {
             java.lang.management.OperatingSystemMXBean osBean = java.lang.management.ManagementFactory.getOperatingSystemMXBean();
             if (osBean instanceof com.sun.management.OperatingSystemMXBean) {
@@ -189,9 +189,9 @@ public class SystemDiagnosticService {
         } catch (Exception e) {
             log.warn("Could not retrieve host Memory usage: {}", e.getMessage());
         }
-        report.setMemoryUsagePct(memUsage > 0 ? memUsage : 42.5);
+        report.setMemoryUsagePct(memUsage);
 
-        double diskUsage = 0.0;
+        Double diskUsage = null;
         try {
             File root = new File("/");
             long totalSpace = root.getTotalSpace();
@@ -203,7 +203,7 @@ public class SystemDiagnosticService {
         } catch (Exception e) {
             log.warn("Could not retrieve host Disk usage: {}", e.getMessage());
         }
-        report.setDiskUsagePct(diskUsage > 0 ? diskUsage : 18.7);
+        report.setDiskUsagePct(diskUsage);
 
         report.setOverallStatus(allOk ? "SUCCESS" : "FAILED");
         return report;
@@ -256,9 +256,9 @@ public class SystemDiagnosticService {
         private String iperfBinaryStatus;
         private String iperfBinaryDetails;
         private String overallStatus;
-        private double cpuUsagePct;
-        private double memoryUsagePct;
-        private double diskUsagePct;
+        private Double cpuUsagePct;
+        private Double memoryUsagePct;
+        private Double diskUsagePct;
     }
 
     @Data
