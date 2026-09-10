@@ -6,11 +6,35 @@ import re
 import json
 import subprocess
 import requests
+import hmac
+import hashlib
+import uuid
 
 # Default Configuration
 PORTAL_SERVER_URL = os.environ.get("PORTAL_SERVER_URL", "http://localhost:8082")
 AGENT_TOKEN = os.environ.get("AGENT_TOKEN", "")
+AGENT_ID = os.environ.get("AGENT_ID", "")
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL_SECONDS", "5"))
+ENABLE_HMAC_SIGNING = os.environ.get("ENABLE_HMAC_SIGNING", "false").lower() == "true"
+
+def build_auth_headers(method, path, body_json=""):
+    headers = {
+        "X-Agent-Token": AGENT_TOKEN,
+        "Content-Type": "application/json"
+    }
+    if ENABLE_HMAC_SIGNING:
+        timestamp = str(int(time.time() * 1000))
+        nonce = str(uuid.uuid4())
+        agent_id_str = AGENT_ID if AGENT_ID else "1"
+        canonical = f"{agent_id_str}\n{method.upper()}\n{path}\n{timestamp}\n{nonce}\n{body_json}"
+        signature = hmac.new(AGENT_TOKEN.encode('utf-8'), canonical.encode('utf-8'), hashlib.sha256).hexdigest()
+
+        headers["X-Agent-Timestamp"] = timestamp
+        headers["X-Agent-Nonce"] = nonce
+        headers["X-Agent-Signature"] = signature
+        if AGENT_ID:
+            headers["X-Agent-Id"] = str(AGENT_ID)
+    return headers
 
 def run_ping(host, count):
     result = {
@@ -150,18 +174,17 @@ def main():
     print(f"Starting Network Subnet Monitoring Agent...")
     print(f"Portal Server: {PORTAL_SERVER_URL}")
     print(f"Polling interval: {POLL_INTERVAL_SECONDS}s")
+    print(f"HMAC Request Signing: {'ENABLED' if ENABLE_HMAC_SIGNING else 'DISABLED'}")
     print("Agent is active. Waiting for tasks...")
-
-    headers = {
-        "X-Agent-Token": AGENT_TOKEN,
-        "Content-Type": "application/json"
-    }
 
     while True:
         try:
             # Poll for task
-            poll_url = f"{PORTAL_SERVER_URL}/api/v1/agents/poll"
-            response = requests.get(poll_url, headers=headers, timeout=10)
+            poll_path = "/api/v1/agents/poll"
+            poll_url = f"{PORTAL_SERVER_URL}{poll_path}"
+            poll_headers = build_auth_headers("GET", poll_path)
+            
+            response = requests.get(poll_url, headers=poll_headers, timeout=10)
 
             if response.status_code == 200:
                 task = response.json()
@@ -184,8 +207,12 @@ def main():
                     output = run_iperf(server, duration, iperf_proto, port)
 
                 # Submit results
-                submit_url = f"{PORTAL_SERVER_URL}/api/v1/agents/results/{job_id}"
-                submit_resp = requests.post(submit_url, headers=headers, json=output, timeout=10)
+                submit_path = f"/api/v1/agents/results/{job_id}"
+                submit_url = f"{PORTAL_SERVER_URL}{submit_path}"
+                body_json = json.dumps(output)
+                submit_headers = build_auth_headers("POST", submit_path, body_json)
+                
+                submit_resp = requests.post(submit_url, headers=submit_headers, json=output, timeout=10)
                 
                 if submit_resp.status_code == 200:
                     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Job #{job_id} executed and result submitted successfully.")
@@ -200,7 +227,7 @@ def main():
 
         except requests.exceptions.ConnectionError:
             print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Connection error. Portal server is unreachable. Retrying in 10s...")
-            time.sleep(5) # wait extra time before retry
+            time.sleep(5)
         except Exception as e:
             print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Error in polling loop: {str(e)}")
 

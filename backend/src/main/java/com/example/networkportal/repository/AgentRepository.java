@@ -8,6 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface AgentRepository extends JpaRepository<Agent, Long> {
-    Optional<Agent> findByToken(String token);
+    Optional<Agent> findByTokenHash(String tokenHash);
     Optional<Agent> findByName(String name);
 }
