@@ -11,6 +11,7 @@ import { Jobs } from './pages/Jobs';
 import { AuditLogs } from './pages/AuditLogs';
 import { Diagnostics } from './pages/Diagnostics';
 import { Agents } from './pages/Agents';
+import { Dashboard } from './pages/Dashboard';
 import {
   Activity,
   Terminal,
@@ -205,7 +206,7 @@ const AppContent = () => {
         element={
           <ProtectedRoute>
             <NocLayout>
-              <Home />
+              <Dashboard />
             </NocLayout>
           </ProtectedRoute>
         } 
