@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { NocLayout } from './components/NocLayout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Users } from './pages/Users';
@@ -11,6 +11,16 @@ import { Jobs } from './pages/Jobs';
 import { AuditLogs } from './pages/AuditLogs';
 import { Diagnostics } from './pages/Diagnostics';
 import { Agents } from './pages/Agents';
+import {
+  Activity,
+  Terminal,
+  Radio,
+  Users as UsersIcon,
+  FileText,
+  ShieldCheck,
+  LayoutDashboard
+} from 'lucide-react';
+import { NocPanel, MetricReadout, StatusIndicator, SectionHeader, RetroButton } from './components/common';
 
 const Home = () => {
   const { user } = useAuth();
@@ -41,139 +51,135 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="container">
-      <div className="glass-panel" style={{ textAlign: 'center', padding: '50px 40px', background: 'var(--bg-glass)' }}>
-        <h1 style={{ marginBottom: '16px', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '2.5rem' }}>
-          Network Test Automation Portal
-        </h1>
-        <p style={{ maxWidth: '650px', margin: '0 auto 36px', fontSize: '1.05rem', color: 'var(--text-secondary)', lineHeight: '1.65' }}>
-          Welcome back, <strong style={{ color: 'var(--text-primary)' }}>{user?.username}</strong>! Select an operational panel below to configure test execution scripts, schedule diagnostics, or review audit trails.
-        </p>
+    <div className="space-y-6">
+      <SectionHeader
+        code="SYS_DASHBOARD"
+        title="Network Operations Workstation"
+        subtitle={`Operator Console // ${user?.username}`}
+        actions={<StatusIndicator status="ONLINE" text="SYSTEM READY" />}
+      />
 
-        {/* Dynamic System Stats KPIs */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', marginBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ minWidth: '100px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--color-primary)', letterSpacing: '-0.02em' }}>
-              {loading ? '...' : stats.profilesCount}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Profiles</div>
-          </div>
-          <div style={{ width: '1px', background: 'var(--border-glass)', height: '36px' }}></div>
-          <div style={{ minWidth: '100px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--color-info)', letterSpacing: '-0.02em' }}>
-              {loading ? '...' : stats.jobsCount}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Jobs Executed</div>
-          </div>
-          <div style={{ width: '1px', background: 'var(--border-glass)', height: '36px' }}></div>
-          <div style={{ minWidth: '100px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: 'var(--color-warning)', letterSpacing: '-0.02em' }}>
-              {loading ? '...' : stats.agentsCount}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Active Agents</div>
-          </div>
-          <div style={{ width: '1px', background: 'var(--border-glass)', height: '36px' }}></div>
-          <div style={{ minWidth: '100px' }}>
-            <div style={{ 
-              fontSize: '2.2rem', 
-              fontWeight: '800', 
-              color: stats.overallStatus === 'SUCCESS' ? 'var(--color-success)' : 'var(--color-danger)', 
-              letterSpacing: '-0.02em'
-            }}>
-              {loading ? '...' : (stats.overallStatus === 'SUCCESS' ? 'HEALTHY' : 'DEGRADED')}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '700', marginTop: '2px' }}>Orchestrator</div>
-          </div>
-        </div>
+      {/* Overview Metric Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <MetricReadout label="PROFILES" value={loading ? '...' : stats.profilesCount} status="neutral" icon={Activity} />
+        <MetricReadout label="JOBS EXECUTED" value={loading ? '...' : stats.jobsCount} status="cyan" icon={Terminal} />
+        <MetricReadout label="ACTIVE AGENTS" value={loading ? '...' : stats.agentsCount} status="amber" icon={Radio} />
+        <MetricReadout
+          label="ORCHESTRATOR"
+          value={loading ? '...' : (stats.overallStatus === 'SUCCESS' ? 'HEALTHY' : 'DEGRADED')}
+          status={stats.overallStatus === 'SUCCESS' ? 'green' : 'red'}
+          icon={ShieldCheck}
+        />
+      </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px', marginTop: '20px' }}>
-          <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/profiles')}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-primary-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-              </svg>
+      {/* Main Operational Modules Grid */}
+      <NocPanel code="CONSOLE_MODULES" title="NOC Control Modules">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 font-mono text-xs">
+          
+          <div 
+            onClick={() => navigate('/profiles')}
+            className="p-4 bg-[#101411] border border-[#27342a] hover:border-[#00ff66]/50 rounded-[2px] cursor-pointer transition-all space-y-2 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#d5e3d8] uppercase group-hover:text-[#00ff66] flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-[#00ff66]" />
+                Test Profiles
+              </span>
+              <span className="text-[10px] text-[#768a7b]">[MODULE 01]</span>
             </div>
-            <h3>Test Profiles</h3>
-            <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
-              Configure targets, protocols (PING/iperf3), and default run limits.
+            <p className="text-[11px] text-[#768a7b] leading-normal">
+              Configure target hosts, protocol types (PING / iPerf3), packet counts, and automated cron check intervals.
             </p>
           </div>
 
-          <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/jobs')}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-info-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-info)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                <line x1="8" y1="21" x2="16" y2="21" />
-                <line x1="12" y1="17" x2="12" y2="21" />
-              </svg>
+          <div 
+            onClick={() => navigate('/jobs')}
+            className="p-4 bg-[#101411] border border-[#27342a] hover:border-[#00bfff]/50 rounded-[2px] cursor-pointer transition-all space-y-2 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#d5e3d8] uppercase group-hover:text-[#00bfff] flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-[#00bfff]" />
+                Test Jobs Queue
+              </span>
+              <span className="text-[10px] text-[#768a7b]">[MODULE 02]</span>
             </div>
-            <h3>Test Jobs</h3>
-            <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
-              Launch active network queries and poll status telemetry in real-time.
+            <p className="text-[11px] text-[#768a7b] leading-normal">
+              Launch active network diagnostic queries, inspect attempt retries, and review real-time execution outputs.
             </p>
           </div>
 
           {['ADMIN', 'OPERATOR'].includes(user?.role) && (
-            <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/agents')}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-warning-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                  <line x1="4" y1="22" x2="4" y2="15" />
-                </svg>
+            <div 
+              onClick={() => navigate('/agents')}
+              className="p-4 bg-[#101411] border border-[#27342a] hover:border-[#ffb000]/50 rounded-[2px] cursor-pointer transition-all space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#d5e3d8] uppercase group-hover:text-[#ffb000] flex items-center gap-1.5">
+                  <Radio className="w-4 h-4 text-[#ffb000]" />
+                  Subnet Agents
+                </span>
+                <span className="text-[10px] text-[#768a7b]">[MODULE 03]</span>
               </div>
-              <h3>Subnet Agents</h3>
-              <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
-                Deploy and manage remote subnet agents to verify branch connectivity.
+              <p className="text-[11px] text-[#768a7b] leading-normal">
+                Deploy and monitor remote Python vantage agents running across separate subnets for distributed latency probes.
               </p>
             </div>
           )}
 
           {user?.role === 'ADMIN' && (
             <>
-              <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/users')}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-success-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
+              <div 
+                onClick={() => navigate('/users')}
+                className="p-4 bg-[#101411] border border-[#27342a] hover:border-[#00ff66]/50 rounded-[2px] cursor-pointer transition-all space-y-2 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#d5e3d8] uppercase group-hover:text-[#00ff66] flex items-center gap-1.5">
+                    <UsersIcon className="w-4 h-4 text-[#00ff66]" />
+                    User Settings
+                  </span>
+                  <span className="text-[10px] text-[#768a7b]">[MODULE 04]</span>
                 </div>
-                <h3>User Management</h3>
-                <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
-                  Manage authorization levels, toggle accounts, and inspect active operators.
+                <p className="text-[11px] text-[#768a7b] leading-normal">
+                  Authorize operator accounts, modify access role levels, and activate/deactivate portal credentials.
                 </p>
               </div>
 
-              <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/audit-logs')}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-danger-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
+              <div 
+                onClick={() => navigate('/audit-logs')}
+                className="p-4 bg-[#101411] border border-[#27342a] hover:border-[#ff3333]/50 rounded-[2px] cursor-pointer transition-all space-y-2 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#d5e3d8] uppercase group-hover:text-[#ff3333] flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[#ff3333]" />
+                    Security Audit Trail
+                  </span>
+                  <span className="text-[10px] text-[#768a7b]">[MODULE 05]</span>
                 </div>
-                <h3>Audit Logs</h3>
-                <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
-                  Inspect platform history, state changes, and operator action details.
+                <p className="text-[11px] text-[#768a7b] leading-normal">
+                  Inspect state transitions, security token operations, and administrative event logs.
                 </p>
               </div>
 
-              <div className="glass-panel" style={{ padding: '24px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={() => navigate('/diagnostics')}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-warning-glass)', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
+              <div 
+                onClick={() => navigate('/diagnostics')}
+                className="p-4 bg-[#101411] border border-[#27342a] hover:border-[#00bfff]/50 rounded-[2px] cursor-pointer transition-all space-y-2 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#d5e3d8] uppercase group-hover:text-[#00bfff] flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#00bfff]" />
+                    System Diagnostics
+                  </span>
+                  <span className="text-[10px] text-[#768a7b]">[MODULE 06]</span>
                 </div>
-                <h3>Diagnostics</h3>
-                <p style={{ fontSize: '0.85rem', textAlign: 'center', margin: '8px 0 0' }}>
-                  Verify system tool access, Python integrations, and command paths.
+                <p className="text-[11px] text-[#768a7b] leading-normal">
+                  Run system binary health checks, monitor host resource usage, and stream stdout diagnostics.
                 </p>
               </div>
             </>
           )}
+
         </div>
-      </div>
+      </NocPanel>
     </div>
   );
 };
@@ -182,83 +188,94 @@ const AppContent = () => {
   const { user } = useAuth();
   
   return (
-    <>
-      <Navbar />
-      <Routes>
-        {/* Public Routes */}
-        <Route 
-          path="/login" 
-          element={user ? <Navigate to="/" replace /> : <Login />} 
-        />
-        <Route 
-          path="/register" 
-          element={user ? <Navigate to="/" replace /> : <Register />} 
-        />
+    <Routes>
+      {/* Public Routes */}
+      <Route 
+        path="/login" 
+        element={user ? <Navigate to="/" replace /> : <Login />} 
+      />
+      <Route 
+        path="/register" 
+        element={user ? <Navigate to="/" replace /> : <Register />} 
+      />
 
-        {/* Protected Routes */}
-        <Route 
-          path="/" 
-          element={
-            <ProtectedRoute>
+      {/* Protected Routes inside NOC Layout */}
+      <Route 
+        path="/" 
+        element={
+          <ProtectedRoute>
+            <NocLayout>
               <Home />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/profiles" 
-          element={
-            <ProtectedRoute>
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/profiles" 
+        element={
+          <ProtectedRoute>
+            <NocLayout>
               <Profiles />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/jobs" 
-          element={
-            <ProtectedRoute>
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/jobs" 
+        element={
+          <ProtectedRoute>
+            <NocLayout>
               <Jobs />
-            </ProtectedRoute>
-          } 
-        />
-        
-        {/* Admin Specific Protected Routes */}
-        <Route 
-          path="/users" 
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      
+      {/* Role Protected Routes */}
+      <Route 
+        path="/users" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <NocLayout>
               <Users />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/audit-logs" 
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/audit-logs" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <NocLayout>
               <AuditLogs />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/diagnostics" 
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/diagnostics" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <NocLayout>
               <Diagnostics />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/agents" 
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/agents" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'OPERATOR']}>
+            <NocLayout>
               <Agents />
-            </ProtectedRoute>
-          } 
-        />
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 
