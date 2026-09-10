@@ -46,6 +46,8 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                // Swagger / OpenAPI documentation endpoints
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // Agent polling endpoints use their own token-based auth scheme
                 .requestMatchers("/api/v1/agents/poll", "/api/v1/agents/results/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/users/**").hasRole("ADMIN")
@@ -55,6 +57,11 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")
+                )
             )
             // Add security response headers
             .headers(headers -> headers

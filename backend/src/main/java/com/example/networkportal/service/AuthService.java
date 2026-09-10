@@ -95,6 +95,8 @@ public class AuthService {
                     .email(user.getEmail())
                     .role(user.getRole().name())
                     .build();
+        } catch (UnauthorizedException e) {
+            throw e;
         } catch (Exception e) {
             throw new UnauthorizedException("Invalid username or password");
         }

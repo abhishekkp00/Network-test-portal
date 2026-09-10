@@ -5,9 +5,15 @@ import com.example.networkportal.validation.HostOrIp;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class JobRequest {
 
     @NotNull(message = "Profile ID is required")
@@ -35,4 +41,3 @@ public class JobRequest {
 
     private Long agentId;
 }
-

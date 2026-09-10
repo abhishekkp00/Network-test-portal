@@ -19,7 +19,6 @@ spring:
       idle-timeout: 300000
       max-lifetime: 1200000
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     # Disable SQL logging in production — enable only in dev profile
@@ -38,6 +37,11 @@ workers:
   ping-script-path: ${WORKERS_PING_SCRIPT_PATH}
   iperf-script-path: ${WORKERS_IPERF_SCRIPT_PATH}
   timeout-seconds: ${WORKERS_TIMEOUT_SECONDS:30}
+  max-output-bytes: ${WORKERS_MAX_OUTPUT_BYTES:1048576}
+  max-concurrent-processes: ${WORKERS_MAX_CONCURRENT_PROCESSES:10}
+  target-protection:
+    enabled: ${WORKERS_TARGET_PROTECTION_ENABLED:true}
+    allow-loopback: ${WORKERS_ALLOW_LOOPBACK:false}
 
 alerts:
   slack-webhook-url: ${ALERTS_SLACK_WEBHOOK_URL:}
@@ -49,6 +53,29 @@ alerts:
 app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost,http://localhost:5173,http://127.0.0.1}
+
+agents:
+  heartbeat:
+    degraded-threshold-seconds: ${AGENTS_HEARTBEAT_DEGRADED_THRESHOLD_SECONDS:30}
+    offline-threshold-seconds: ${AGENTS_HEARTBEAT_OFFLINE_THRESHOLD_SECONDS:90}
+
+jobs:
+  executor:
+    core-pool-size: ${JOBS_EXECUTOR_CORE_POOL_SIZE:5}
+    max-pool-size: ${JOBS_EXECUTOR_MAX_POOL_SIZE:10}
+    queue-capacity: ${JOBS_EXECUTOR_QUEUE_CAPACITY:25}
+    thread-name-prefix: ${JOBS_EXECUTOR_THREAD_NAME_PREFIX:network-job-}
+    await-termination-seconds: ${JOBS_EXECUTOR_AWAIT_TERMINATION_SECONDS:30}
+  stale-timeout-seconds: ${JOBS_STALE_TIMEOUT_SECONDS:60}
+  retry:
+    max-attempts: ${JOBS_RETRY_MAX_ATTEMPTS:3}
+    initial-interval-seconds: ${JOBS_RETRY_INITIAL_INTERVAL_SECONDS:5}
+    multiplier: ${JOBS_RETRY_MULTIPLIER:2.0}
+    max-interval-seconds: ${JOBS_RETRY_MAX_INTERVAL_SECONDS:60}
+  recovery:
+    interval-ms: ${JOBS_RECOVERY_INTERVAL_MS:10000}
+
+
 
 
 ---
