@@ -30,4 +30,7 @@ public class JobResponse {
     private LocalDateTime createdAt;
     private Long agentId;
     private String agentName;
+    private Integer attemptNumber;
+    private Integer maxAttempts;
+    private LocalDateTime nextRetryAt;
 }

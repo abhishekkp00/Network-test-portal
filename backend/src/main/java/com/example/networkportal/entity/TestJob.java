@@ -62,6 +62,17 @@ public class TestJob {
     @Column(name = "finished_at")
     private LocalDateTime finishedAt;
 
+    @Column(name = "attempt_number", nullable = false)
+    @Builder.Default
+    private Integer attemptNumber = 0;
+
+    @Column(name = "max_attempts", nullable = false)
+    @Builder.Default
+    private Integer maxAttempts = 3;
+
+    @Column(name = "next_retry_at")
+    private LocalDateTime nextRetryAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

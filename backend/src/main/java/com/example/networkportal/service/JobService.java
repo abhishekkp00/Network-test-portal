@@ -19,12 +19,15 @@ import com.example.networkportal.exception.BadRequestException;
 import com.example.networkportal.validation.HostOrIpValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -40,12 +43,41 @@ public class JobService {
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
     private final AgentRepository agentRepository;
+    private final ThreadPoolTaskExecutor networkJobExecutor;
+
+    @Value("${jobs.retry.max-attempts:3}")
+    private int defaultMaxAttempts = 3;
+
+    @Value("${jobs.retry.initial-interval-seconds:5}")
+    private long initialIntervalSeconds = 5L;
+
+    @Value("${jobs.retry.multiplier:2.0}")
+    private double multiplier = 2.0;
+
+    @Value("${jobs.retry.max-interval-seconds:60}")
+    private long maxIntervalSeconds = 60L;
 
     private JobService self;
 
     @org.springframework.beans.factory.annotation.Autowired
     public void setSelf(@org.springframework.context.annotation.Lazy JobService self) {
         this.self = self;
+    }
+
+    @Transactional
+    public TestJob claimNextPendingJobForAgent(Long agentId) {
+        LocalDateTime now = LocalDateTime.now();
+        Optional<TestJob> pendingJobOpt = jobRepository.findFirstClaimableJobByAgentId(agentId, JobStatus.PENDING, now);
+        if (pendingJobOpt.isEmpty()) {
+            return null;
+        }
+
+        TestJob job = pendingJobOpt.get();
+        validateAndTransitionStatus(job, JobStatus.RUNNING);
+        job.setAttemptNumber(job.getAttemptNumber() + 1);
+        job.setNextRetryAt(null);
+        job.setStartedAt(now);
+        return jobRepository.save(job);
     }
 
     @Transactional
@@ -82,8 +114,9 @@ public class JobService {
                 .effectiveCount(count)
                 .effectiveDurationSeconds(duration)
                 .effectivePort(port)
+                .attemptNumber(0)
+                .maxAttempts(defaultMaxAttempts)
                 .build();
-
 
         jobRepository.save(job);
 
@@ -178,14 +211,14 @@ public class JobService {
                     log.error("Failed to mark job as failed: " + jobId, ex);
                 }
             }
-        });
+        }, networkJobExecutor);
     }
 
     @Transactional
     public void updateJobStatus(Long jobId, JobStatus status, LocalDateTime startedAt, LocalDateTime finishedAt) {
         TestJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
-        job.setStatus(status);
+        validateAndTransitionStatus(job, status);
         if (startedAt != null) {
             job.setStartedAt(startedAt);
         }
@@ -200,8 +233,23 @@ public class JobService {
         TestJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
 
-        job.setStatus(finalStatus);
+        // If execution failed or timed out and attempts remain, schedule retry with exponential backoff
+        if ((finalStatus == JobStatus.FAILED || finalStatus == JobStatus.TIMEOUT) && job.getAttemptNumber() < job.getMaxAttempts()) {
+            long backoffSeconds = calculateExponentialBackoff(job.getAttemptNumber());
+            LocalDateTime nextRetryAt = LocalDateTime.now().plusSeconds(backoffSeconds);
+
+            log.warn("Job #{} execution result is {}. Requeueing for attempt {}/{} at {}",
+                    jobId, finalStatus, job.getAttemptNumber() + 1, job.getMaxAttempts(), nextRetryAt);
+
+            job.setNextRetryAt(nextRetryAt);
+            validateAndTransitionStatus(job, JobStatus.PENDING);
+            jobRepository.save(job);
+            return;
+        }
+
+        validateAndTransitionStatus(job, finalStatus);
         job.setFinishedAt(LocalDateTime.now());
+        job.setNextRetryAt(null);
         jobRepository.save(job);
 
         TestResult result = TestResult.builder()
@@ -223,8 +271,9 @@ public class JobService {
         // Dispatch notification alerts if metrics breach thresholds
         notificationService.checkAndNotify(result);
 
+        String username = job.getRequestedBy() != null ? job.getRequestedBy().getUsername() : "SYSTEM";
         auditLogService.log(
-                job.getRequestedBy().getUsername(),
+                username,
                 "JOB_FINISHED",
                 "TestJob",
                 job.getId(),
@@ -232,12 +281,95 @@ public class JobService {
         );
     }
 
+    @Transactional
+    public void processStaleJobs(LocalDateTime cutoff) {
+        List<TestJob> staleJobs = jobRepository.findStaleJobs(JobStatus.RUNNING, cutoff);
+        for (TestJob job : staleJobs) {
+            log.warn("Stale job detected: Job #{} (running since {}). Initiating recovery.", job.getId(), job.getStartedAt());
+
+            validateAndTransitionStatus(job, JobStatus.STALE);
+
+            if (job.getAttemptNumber() < job.getMaxAttempts()) {
+                long backoffSeconds = calculateExponentialBackoff(job.getAttemptNumber());
+                LocalDateTime nextRetryAt = LocalDateTime.now().plusSeconds(backoffSeconds);
+
+                job.setNextRetryAt(nextRetryAt);
+                validateAndTransitionStatus(job, JobStatus.PENDING);
+                jobRepository.save(job);
+
+                log.info("Stale Job #{} requeued for retry (attempt {}/{} scheduled at {})",
+                        job.getId(), job.getAttemptNumber() + 1, job.getMaxAttempts(), nextRetryAt);
+            } else {
+                validateAndTransitionStatus(job, JobStatus.FAILED);
+                job.setFinishedAt(LocalDateTime.now());
+                job.setNextRetryAt(null);
+                jobRepository.save(job);
+
+                TestResult result = TestResult.builder()
+                        .testJob(job)
+                        .errorMessage("Job timed out / agent crashed. Max execution attempts (" + job.getMaxAttempts() + ") exceeded.")
+                        .exitCode(1)
+                        .parsedStatus("FAILED")
+                        .build();
+                resultRepository.save(result);
+
+                String username = job.getRequestedBy() != null ? job.getRequestedBy().getUsername() : "SYSTEM";
+                auditLogService.log(
+                        username,
+                        "JOB_STALE_FAILED",
+                        "TestJob",
+                        job.getId(),
+                        "Job failed after exhausting max attempts (" + job.getMaxAttempts() + ")"
+                );
+                log.error("Job #{} marked FAILED after exhausting max attempts ({}/{})", job.getId(), job.getAttemptNumber(), job.getMaxAttempts());
+            }
+        }
+    }
+
+    public long calculateExponentialBackoff(int attempt) {
+        if (attempt <= 0) {
+            return initialIntervalSeconds;
+        }
+        long backoff = (long) (initialIntervalSeconds * Math.pow(multiplier, attempt - 1));
+        return Math.min(backoff, maxIntervalSeconds);
+    }
+
+    private void validateAndTransitionStatus(TestJob job, JobStatus newStatus) {
+        JobStatus currentStatus = job.getStatus();
+        if (!isValidTransition(currentStatus, newStatus)) {
+            throw new IllegalStateException(
+                    String.format("Invalid status transition for Job #%d: %s -> %s", job.getId(), currentStatus, newStatus)
+            );
+        }
+        job.setStatus(newStatus);
+    }
+
+    private boolean isValidTransition(JobStatus currentStatus, JobStatus newStatus) {
+        if (currentStatus == newStatus) {
+            return false;
+        }
+        switch (currentStatus) {
+            case PENDING:
+                return newStatus == JobStatus.RUNNING || newStatus == JobStatus.FAILED || newStatus == JobStatus.TIMEOUT;
+            case RUNNING:
+                return newStatus == JobStatus.SUCCESS || newStatus == JobStatus.FAILED || newStatus == JobStatus.TIMEOUT || newStatus == JobStatus.STALE || newStatus == JobStatus.PENDING;
+            case STALE:
+                return newStatus == JobStatus.PENDING || newStatus == JobStatus.FAILED;
+            case SUCCESS:
+            case FAILED:
+            case TIMEOUT:
+                return false;
+            default:
+                return false;
+        }
+    }
+
     public JobResponse mapToResponse(TestJob job) {
         return JobResponse.builder()
                 .id(job.getId())
                 .profileId(job.getProfile().getId())
                 .profileName(job.getProfile().getName())
-                .requestedByUsername(job.getRequestedBy().getUsername())
+                .requestedByUsername(job.getRequestedBy() != null ? job.getRequestedBy().getUsername() : "SYSTEM")
                 .status(job.getStatus())
                 .effectiveHost(job.getEffectiveHost())
                 .effectiveServer(job.getEffectiveServer())
@@ -250,6 +382,9 @@ public class JobService {
                 .createdAt(job.getCreatedAt())
                 .agentId(job.getAgent() != null ? job.getAgent().getId() : null)
                 .agentName(job.getAgent() != null ? job.getAgent().getName() : "Local Server")
+                .attemptNumber(job.getAttemptNumber())
+                .maxAttempts(job.getMaxAttempts())
+                .nextRetryAt(job.getNextRetryAt())
                 .build();
     }
 
