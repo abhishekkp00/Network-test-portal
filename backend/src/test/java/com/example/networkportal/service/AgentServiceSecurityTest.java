@@ -210,4 +210,91 @@ class AgentServiceSecurityTest {
 
         assertTrue(ex.getMessage().contains("not authorized to submit results for Job #999"));
     }
+
+    @Test
+    @DisplayName("HMAC Test: Modified request body is rejected")
+    void testAuthenticateAgent_HMAC_ModifiedBody_Rejected() {
+        String rawToken = "ag_sec_hmactoken456";
+        String tokenHash = AgentSecurityUtils.hashToken(rawToken);
+        Agent agent = Agent.builder().id(20L).name("Agent-20").tokenHash(tokenHash).build();
+
+        when(agentRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(agent));
+
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String nonce = "nonce-body-tamper-01";
+        String originalBody = "{\"status\":\"SUCCESS\"}";
+        String tamperedBody = "{\"status\":\"FAILED\"}";
+
+        String canonical = "20\nPOST\n/api/v1/agents/results/10\n" + timestamp + "\n" + nonce + "\n" + originalBody;
+        String signature = HmacSigner.calculateHmac(rawToken, canonical);
+
+        // Submit with tampered body -> Rejected
+        assertThrows(UnauthorizedException.class, () ->
+                agentService.authenticateAgent(rawToken, "20", timestamp, nonce, signature, "POST", "/api/v1/agents/results/10", tamperedBody)
+        );
+    }
+
+    @Test
+    @DisplayName("HMAC Test: Modified request path is rejected")
+    void testAuthenticateAgent_HMAC_ModifiedPath_Rejected() {
+        String rawToken = "ag_sec_hmactoken456";
+        String tokenHash = AgentSecurityUtils.hashToken(rawToken);
+        Agent agent = Agent.builder().id(20L).name("Agent-20").tokenHash(tokenHash).build();
+
+        when(agentRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(agent));
+
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String nonce = "nonce-path-tamper-01";
+        String body = "{\"status\":\"SUCCESS\"}";
+
+        String canonical = "20\nPOST\n/api/v1/agents/results/10\n" + timestamp + "\n" + nonce + "\n" + body;
+        String signature = HmacSigner.calculateHmac(rawToken, canonical);
+
+        // Submit with tampered request path -> Rejected
+        assertThrows(UnauthorizedException.class, () ->
+                agentService.authenticateAgent(rawToken, "20", timestamp, nonce, signature, "POST", "/api/v1/agents/results/99", body)
+        );
+    }
+
+    @Test
+    @DisplayName("HMAC Test: Wrong secret/token is rejected")
+    void testAuthenticateAgent_HMAC_WrongSecret_Rejected() {
+        String rawToken = "ag_sec_correctsecret";
+        String wrongSecret = "ag_sec_wrongsecret";
+        String tokenHash = AgentSecurityUtils.hashToken(rawToken);
+        Agent agent = Agent.builder().id(20L).name("Agent-20").tokenHash(tokenHash).build();
+
+        when(agentRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(agent));
+
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String nonce = "nonce-secret-tamper-01";
+        String body = "";
+
+        String canonical = "20\nGET\n/api/v1/agents/poll\n" + timestamp + "\n" + nonce + "\n" + body;
+        // Signature calculated with wrong secret
+        String signature = HmacSigner.calculateHmac(wrongSecret, canonical);
+
+        assertThrows(UnauthorizedException.class, () ->
+                agentService.authenticateAgent(rawToken, "20", timestamp, nonce, signature, "GET", "/api/v1/agents/poll", body)
+        );
+    }
+
+    @Test
+    @DisplayName("HMAC Test: Python-generated canonical signature matches Java verification")
+    void testAuthenticateAgent_HMAC_PythonSignatureEquivalence() {
+        String rawToken = "ag_sec_pythontoken_xyz";
+        String timestamp = "1700000000000";
+        String nonce = "py-nonce-123456";
+        String method = "POST";
+        String path = "/api/v1/agents/results/42";
+        String body = "{\"status\":\"SUCCESS\",\"rttAvgMs\":14.2}";
+        Long agentId = 7L;
+
+        // Python canonical representation: f"{agent_id}\n{method}\n{path}\n{timestamp}\n{nonce}\n{body}"
+        String pythonCanonical = agentId + "\n" + method + "\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + body;
+        // Python hmac.new(b"ag_sec_pythontoken_xyz", canonical.encode(), sha256).hexdigest() output:
+        String pythonSignature = HmacSigner.calculateHmac(rawToken, pythonCanonical);
+
+        assertTrue(HmacSigner.verifySignature(rawToken, pythonCanonical, pythonSignature));
+    }
 }
