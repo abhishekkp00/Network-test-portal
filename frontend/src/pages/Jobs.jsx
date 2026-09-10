@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
+import { RotateCw, Terminal, CheckCircle2, AlertTriangle, X, Activity, Server } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 export const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -86,119 +88,108 @@ export const Jobs = () => {
     return d.toLocaleString();
   };
 
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'PENDING': return 'badge-pending';
-      case 'RUNNING': return 'badge-running';
-      case 'STALE': return 'badge-warning';
-      case 'SUCCESS': return 'badge-success';
-      case 'FAILED': return 'badge-failed';
-      case 'TIMEOUT': return 'badge-timeout';
-      default: return '';
-    }
-  };
+  const totalJobs = jobs.length;
+  const runningJobs = jobs.filter(j => j.status === 'RUNNING').length;
+  const pendingJobs = jobs.filter(j => j.status === 'PENDING').length;
+  const successJobs = jobs.filter(j => j.status === 'SUCCESS').length;
+  const failedJobs = jobs.filter(j => j.status === 'FAILED' || j.status === 'TIMEOUT' || j.status === 'STALE').length;
 
   if (loading && jobs.length === 0) {
     return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner"></div>
-        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)' }}>Loading job lists...</span>
+      <div className="container flex justify-center items-center h-[60vh] font-mono text-xs text-[#768a7b]">
+        <span>[SYS.INFO] Polling active diagnostic jobs...</span>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ marginBottom: '4px' }}>Test Jobs</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Real-time telemetry and state tracking of execution scripts.</p>
-        </div>
-        <button className="btn btn-secondary" onClick={() => fetchJobs()} disabled={loading} style={{ marginLeft: 'auto' }}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
+    <div className="container space-y-6">
+      <SectionHeader
+        code="SYS_JOB_QUEUE"
+        title="Diagnostic Job Execution Queue"
+        subtitle="Real-time execution status and telemetry report logs"
+        actions={
+          <RetroButton variant="secondary" icon={RotateCw} onClick={() => fetchJobs(true)} disabled={loading}>
+            Refresh Queue
+          </RetroButton>
+        }
+      />
 
       {error && (
-        <div 
-          style={{ 
-            padding: '16px', 
-            backgroundColor: 'var(--color-danger-glass)', 
-            color: 'var(--color-danger)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: '24px',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}
-        >
-          {error}
+        <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-center gap-2">
+          <span className="font-bold">[ERR]</span>
+          <span>{error}</span>
         </div>
       )}
 
+      {/* Summary Readout Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <MetricReadout label="TOTAL JOBS" value={totalJobs} status="neutral" icon={Terminal} />
+        <MetricReadout label="RUNNING" value={runningJobs} status="cyan" icon={Activity} />
+        <MetricReadout label="PENDING" value={pendingJobs} status="amber" icon={RotateCw} />
+        <MetricReadout label="SUCCESS" value={successJobs} status="green" icon={CheckCircle2} />
+        <MetricReadout label="FAILED/STALE" value={failedJobs} status="red" icon={AlertTriangle} />
+      </div>
+
       {/* Jobs Table */}
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+      <NocPanel code="QUEUE_LOGS" title="Job Execution Records" noPadding>
+        <div className="table-container border-0 rounded-none">
           <table className="custom-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Profile Name</th>
-                <th>Requested By</th>
-                <th>Status</th>
-                <th>Effective Target</th>
-                <th>Triggered At</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>JOB ID</th>
+                <th>PROFILE / PROTOCOL</th>
+                <th>EXECUTION TARGET</th>
+                <th>STATUS</th>
+                <th>ATTEMPTS</th>
+                <th>EXECUTED BY</th>
+                <th>TIMESTAMP</th>
+                <th className="text-right">ACTION</th>
               </tr>
             </thead>
             <tbody>
               {jobs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                    No execution jobs found. Run a Test Profile to initiate one.
+                  <td colSpan="8" className="text-center py-8 text-[#768a7b]">
+                    No diagnostic jobs found in queue. Execute a profile to start.
                   </td>
                 </tr>
               ) : (
-                jobs.map((j) => (
-                  <tr key={j.id}>
-                    <td>#{j.id}</td>
+                jobs.map((job) => (
+                  <tr key={job.id}>
+                    <td className="font-mono text-[#00ff66] font-bold">
+                      #{job.id}
+                    </td>
                     <td>
-                      <div style={{ fontWeight: '600' }}>{j.profileName}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Node: {j.agentName || 'Local Server'}
+                      <div className="font-semibold text-[#d5e3d8]">
+                        {job.profileName || `Profile #${job.profileId}`}
+                      </div>
+                      <div className="text-[10px] text-[#768a7b]">
+                        [{job.protocolOverride || 'DEFAULT'}]
                       </div>
                     </td>
-                    <td>{j.requestedByUsername}</td>
-                    <td>
-                      <span className={`badge ${getStatusBadgeClass(j.status)}`}>
-                        {j.status}
-                      </span>
-                      {j.attemptNumber > 0 && (
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Attempt {j.attemptNumber}/{j.maxAttempts || 3}
-                        </div>
-                      )}
+                    <td className="font-mono text-[#00bfff]">
+                      {job.hostOverride || job.serverOverride || 'Profile Default'}
                     </td>
                     <td>
-                      <code style={{ fontSize: '0.85rem' }}>
-                        {j.effectiveProtocol === 'PING' ? j.effectiveHost : `${j.effectiveServer}:${j.effectivePort}`}
-                      </code>
+                      <StatusIndicator status={job.status} />
                     </td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {formatDateTime(j.createdAt)}
+                    <td className="font-mono text-[#768a7b]">
+                      {job.attemptNumber || 1} / {job.maxAttempts || 3}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {['SUCCESS', 'FAILED', 'TIMEOUT'].includes(j.status) ? (
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem' }}
-                          onClick={() => viewResult(j.id)}
-                        >
-                          View Result
-                        </button>
+                    <td className="text-[#768a7b]">
+                      {job.agentName ? `Agent: ${job.agentName}` : job.executedByUsername || 'Core System'}
+                    </td>
+                    <td className="text-[11px] text-[#768a7b]">
+                      {formatDateTime(job.createdAt)}
+                    </td>
+                    <td className="text-right">
+                      {['SUCCESS', 'FAILED', 'TIMEOUT', 'STALE'].includes(job.status) ? (
+                        <RetroButton variant="primary" size="sm" onClick={() => viewResult(job.id)}>
+                          Telemetry
+                        </RetroButton>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', paddingRight: '10px' }}>
-                          <div className="spinner" style={{ width: '12px', height: '12px' }}></div>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Running...</span>
-                        </div>
+                        <span className="text-[10px] text-[#768a7b] italic">Executing...</span>
                       )}
                     </td>
                   </tr>
@@ -207,110 +198,79 @@ export const Jobs = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </NocPanel>
 
       {/* TELEMETRY RESULTS MODAL */}
       {selectedJobId && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
-              <h2 style={{ margin: 0 }}>Job #{selectedJobId} Telemetry</h2>
-              <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem' }} onClick={closeResultModal}>
-                Close
-              </button>
-            </div>
-
-            {resultLoading && (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '50px', gap: '8px', alignItems: 'center' }}>
-                <div className="spinner"></div>
-                <span style={{ color: 'var(--text-secondary)' }}>Retrieving test outcomes...</span>
-              </div>
-            )}
-
-            {resultError && (
-              <div style={{ padding: '12px', backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
-                {resultError}
-              </div>
-            )}
-
-            {result && (
-              <div>
-                {/* Metrics Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                  {result.packetLossPct !== null && (
-                    <div className="glass-panel" style={{ padding: '16px', background: 'rgba(10, 13, 22, 0.4)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Packet Loss</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: result.packetLossPct > 0 ? 'var(--color-danger)' : 'var(--color-success)', marginTop: '4px' }}>
-                        {result.packetLossPct.toFixed(1)}%
-                      </div>
-                    </div>
-                  )}
-                  {result.throughputMbps !== null && (
-                    <div className="glass-panel" style={{ padding: '16px', background: 'rgba(10, 13, 22, 0.4)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Throughput</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-info)', marginTop: '4px' }}>
-                        {result.throughputMbps.toFixed(2)} Mbps
-                      </div>
-                    </div>
-                  )}
-                  {result.rttAvgMs !== null && (
-                    <div className="glass-panel" style={{ padding: '16px', background: 'rgba(10, 13, 22, 0.4)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>RTT Avg</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-primary)', marginTop: '4px' }}>
-                        {result.rttAvgMs.toFixed(2)} ms
-                      </div>
-                    </div>
-                  )}
-                  {result.jitterMs !== null && (
-                    <div className="glass-panel" style={{ padding: '16px', background: 'rgba(10, 13, 22, 0.4)', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Jitter</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-warning)', marginTop: '4px' }}>
-                        {result.jitterMs.toFixed(2)} ms
-                      </div>
-                    </div>
-                  )}
+        <div className="fixed inset-0 bg-[#0a0d0b]/90 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl">
+            <NocPanel
+              code={`JOB_TELEMETRY // #${selectedJobId}`}
+              title="Execution Output Telemetry"
+              action={
+                <RetroButton variant="ghost" size="sm" icon={X} onClick={closeResultModal}>
+                  Close
+                </RetroButton>
+              }
+            >
+              {resultLoading && (
+                <div className="py-12 text-center font-mono text-xs text-[#768a7b]">
+                  [SYS.INFO] Fetching job result telemetry...
                 </div>
+              )}
 
-                {result.rttMinMs !== null && (
-                  <div style={{ display: 'flex', gap: '20px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '24px' }}>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Min RTT:</span> <strong style={{ color: 'var(--text-primary)' }}>{result.rttMinMs} ms</strong></div>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Max RTT:</span> <strong style={{ color: 'var(--text-primary)' }}>{result.rttMaxMs} ms</strong></div>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Exit Code:</span> <strong>{result.exitCode}</strong></div>
-                    <div><span style={{ color: 'var(--text-muted)' }}>Status:</span> <span className={`badge ${result.parsedStatus === 'SUCCESS' ? 'badge-success' : 'badge-failed'}`} style={{ fontSize: '0.65rem', padding: '2px 6px' }}>{result.parsedStatus}</span></div>
-                  </div>
-                )}
-
-                {result.errorMessage && (
-                  <div style={{ padding: '14px', backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '24px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                    <strong>Execution Error:</strong> {result.errorMessage}
-                  </div>
-                )}
-
-                {/* Raw Terminal Console */}
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'between' }}>
-                    <span>Raw CLI Output</span>
-                  </div>
-                  <pre 
-                    style={{ 
-                      margin: 0, 
-                      padding: '16px', 
-                      backgroundColor: '#05070c', 
-                      border: '1px solid var(--border-glass)', 
-                      borderRadius: 'var(--radius-sm)', 
-                      fontFamily: 'var(--font-mono)', 
-                      fontSize: '0.8rem', 
-                      color: '#22c55e', 
-                      overflowX: 'auto', 
-                      maxHeight: '300px',
-                      whiteSpace: 'pre-wrap'
-                    }}
-                  >
-                    {result.rawOutput || 'No stdout output generated.'}
-                  </pre>
+              {resultError && (
+                <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333]">
+                  [ERR] {resultError}
                 </div>
-              </div>
-            )}
+              )}
+
+              {!resultLoading && !resultError && !result && (
+                <div className="py-12 text-center font-mono text-xs text-[#768a7b]">
+                  No telemetry output recorded for this job run.
+                </div>
+              )}
+
+              {!resultLoading && result && (
+                <div className="space-y-4 font-mono text-xs">
+                  {/* Summary Metric Strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="p-2 bg-[#101411] border border-[#27342a] rounded-[2px]">
+                      <div className="text-[10px] text-[#768a7b]">RTT AVG</div>
+                      <div className="text-sm font-bold text-[#00ff66]">
+                        {result.rttAvgMs !== null && result.rttAvgMs !== undefined ? `${result.rttAvgMs} ms` : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-[#101411] border border-[#27342a] rounded-[2px]">
+                      <div className="text-[10px] text-[#768a7b]">PACKET LOSS</div>
+                      <div className="text-sm font-bold text-[#ff3333]">
+                        {result.packetLossPct !== null && result.packetLossPct !== undefined ? `${result.packetLossPct}%` : '0%'}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-[#101411] border border-[#27342a] rounded-[2px]">
+                      <div className="text-[10px] text-[#768a7b]">THROUGHPUT</div>
+                      <div className="text-sm font-bold text-[#00bfff]">
+                        {result.throughputMbps !== null && result.throughputMbps !== undefined ? `${result.throughputMbps} Mbps` : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-[#101411] border border-[#27342a] rounded-[2px]">
+                      <div className="text-[10px] text-[#768a7b]">EXIT CODE</div>
+                      <div className="text-sm font-bold text-[#d5e3d8]">
+                        {result.exitCode !== undefined ? result.exitCode : 0}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Raw Command & Terminal Output Log */}
+                  <div className="space-y-1">
+                    <div className="text-[11px] text-[#768a7b] font-bold uppercase">// RAW SUBPROCESS OUTPUT</div>
+                    <pre className="p-3 bg-[#0a0d0b] border border-[#27342a] rounded-[2px] text-[#00ff66] text-[11px] leading-normal overflow-x-auto max-h-80 font-mono whitespace-pre-wrap">
+                      {result.rawOutput || result.errorMessage || '[No output output returned from execution worker]'}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </NocPanel>
           </div>
         </div>
       )}

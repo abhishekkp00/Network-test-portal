@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
+import { RotateCw, Users as UsersIcon, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 export const Users = () => {
   const [users, setUsers] = useState([]);
@@ -54,79 +56,76 @@ export const Users = () => {
     }
   };
 
+  const adminCount = users.filter(u => u.role === 'ADMIN').length;
+  const operatorCount = users.filter(u => u.role === 'OPERATOR').length;
+  const viewerCount = users.filter(u => u.role === 'VIEWER').length;
+
   if (loading && users.length === 0) {
     return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner"></div>
-        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)' }}>Loading user accounts...</span>
+      <div className="container flex justify-center items-center h-[60vh] font-mono text-xs text-[#768a7b]">
+        <span>[SYS.INFO] Loading user credentials...</span>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ marginBottom: '4px' }}>User Management</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Admin controls to authorize operators, modify roles, and toggle access.</p>
-        </div>
-        <button className="btn btn-secondary" onClick={fetchUsers} disabled={loading} style={{ marginLeft: 'auto' }}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
+    <div className="container space-y-6">
+      <SectionHeader
+        code="SYS_USER_MGMT"
+        title="Operator User Management"
+        subtitle="Manage access roles, permissions, and account activation states"
+        actions={
+          <RetroButton variant="secondary" icon={RotateCw} onClick={fetchUsers} disabled={loading}>
+            Refresh Users
+          </RetroButton>
+        }
+      />
 
       {error && (
-        <div 
-          style={{ 
-            padding: '16px', 
-            backgroundColor: 'var(--color-danger-glass)', 
-            color: 'var(--color-danger)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: '24px',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}
-        >
-          {error}
+        <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-center gap-2">
+          <span className="font-bold">[ERR]</span>
+          <span>{error}</span>
         </div>
       )}
 
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+      {/* Summary Readout Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <MetricReadout label="TOTAL USERS" value={users.length} status="neutral" icon={UsersIcon} />
+        <MetricReadout label="ADMINS" value={adminCount} status="red" icon={ShieldAlert} />
+        <MetricReadout label="OPERATORS" value={operatorCount} status="cyan" icon={UsersIcon} />
+        <MetricReadout label="VIEWERS" value={viewerCount} status="neutral" icon={UsersIcon} />
+      </div>
+
+      <NocPanel code="USER_ACCOUNTS" title="Registered User Accounts" noPadding>
+        <div className="table-container border-0 rounded-none">
           <table className="custom-table">
             <thead>
               <tr>
-                <th>Username</th>
-                <th>Email Address</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>OPERATOR USERNAME</th>
+                <th>EMAIL ADDRESS</th>
+                <th>ACCESS ROLE</th>
+                <th>STATUS</th>
+                <th className="text-right">ACTION</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                    No user accounts found.
+                  <td colSpan="5" className="text-center py-8 text-[#768a7b]">
+                    No user accounts found in database.
                   </td>
                 </tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id}>
-                    <td style={{ fontWeight: '600' }}>{u.username}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
+                    <td className="font-bold text-[#d5e3d8]">{u.username}</td>
+                    <td className="text-[#768a7b]">{u.email}</td>
                     <td>
                       <select
                         value={u.role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         disabled={updatingUserId === u.id}
-                        className="form-control"
-                        style={{ 
-                          width: 'auto', 
-                          padding: '4px 10px', 
-                          fontSize: '0.85rem',
-                          background: 'rgba(10, 13, 22, 0.8)',
-                          borderColor: 'var(--border-glass)'
-                        }}
+                        className="form-control py-1 px-2 text-xs w-auto bg-[#101411]"
                       >
                         <option value="ADMIN">ADMIN</option>
                         <option value="OPERATOR">OPERATOR</option>
@@ -134,22 +133,17 @@ export const Users = () => {
                       </select>
                     </td>
                     <td>
-                      <span 
-                        className={`badge ${u.enabled ? 'badge-success' : 'badge-failed'}`}
-                        style={{ fontSize: '0.7rem' }}
-                      >
-                        {u.enabled ? 'Active' : 'Disabled'}
-                      </span>
+                      <StatusIndicator status={u.enabled ? 'ACTIVE' : 'OFFLINE'} text={u.enabled ? 'ACTIVE' : 'DISABLED'} />
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button
-                        className={`btn ${u.enabled ? 'btn-danger' : 'btn-primary'}`}
-                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                    <td className="text-right">
+                      <RetroButton
+                        variant={u.enabled ? 'danger' : 'primary'}
+                        size="sm"
                         onClick={() => handleToggleEnabled(u.id, u.enabled)}
                         disabled={updatingUserId === u.id}
                       >
                         {u.enabled ? 'Deactivate' : 'Activate'}
-                      </button>
+                      </RetroButton>
                     </td>
                   </tr>
                 ))
@@ -157,7 +151,7 @@ export const Users = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </NocPanel>
     </div>
   );
 };

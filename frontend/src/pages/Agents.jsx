@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { Radio, RotateCw, Plus, Eye, EyeOff, Trash2, Terminal, Shield, Network } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 export const Agents = () => {
   const { user } = useAuth();
@@ -43,7 +45,7 @@ export const Agents = () => {
     setSuccess('');
     try {
       const newAgent = await api.post('/agents', { name, description });
-      setSuccess(`Agent '${newAgent.name}' registered successfully! Copy its token below.`);
+      setSuccess(`Agent '${newAgent.name}' registered successfully! Token generated below.`);
       setName('');
       setDescription('');
       fetchAgents();
@@ -62,7 +64,7 @@ export const Agents = () => {
     setSuccess('');
     try {
       await api.delete(`/agents/${id}`);
-      setSuccess('Agent successfully deleted.');
+      setSuccess('Agent successfully revoked.');
       fetchAgents();
     } catch (err) {
       setError(err.message || 'Failed to delete agent.');
@@ -76,302 +78,160 @@ export const Agents = () => {
     }));
   };
 
-  const getStatusBadge = (lastSeenAt, status) => {
-    if (!lastSeenAt) {
-      return (
-        <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}>
-          Never Connected
-        </span>
-      );
-    }
-
-    if (status === 'ONLINE') {
-      return (
-        <span className="badge" style={{ backgroundColor: 'var(--color-success-glass)', color: 'var(--color-success)' }}>
-          ● Online
-        </span>
-      );
-    } else if (status === 'DEGRADED') {
-      return (
-        <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-          ● Degraded
-        </span>
-      );
-    } else {
-      return (
-        <span className="badge" style={{ backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)' }}>
-          ● Offline
-        </span>
-      );
-    }
-  };
-
   const isAdmin = user?.role === 'ADMIN';
+  const onlineCount = agents.filter(a => a.status === 'ONLINE').length;
+  const degradedCount = agents.filter(a => a.status === 'DEGRADED').length;
+  const offlineCount = agents.filter(a => !a.status || a.status === 'OFFLINE').length;
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Subnet Agents</h1>
-          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0', fontSize: '0.9rem' }}>
-            Monitor and coordinate remote python diagnostic agents running on separate subnets.
-          </p>
-        </div>
-        <button className="btn btn-secondary" onClick={fetchAgents} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
-
-      {/* Topology Styles */}
-      <style>{`
-        @keyframes portalPulse {
-          0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-          70% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+    <div className="container space-y-6">
+      <SectionHeader
+        code="SYS_SUBNET_AGENTS"
+        title="Subnet Vantage Agents"
+        subtitle="Coordinate distributed remote execution nodes across subnets"
+        actions={
+          <RetroButton variant="secondary" icon={RotateCw} onClick={fetchAgents} disabled={loading}>
+            Refresh Status
+          </RetroButton>
         }
-        @keyframes packetStream {
-          0% { left: 0%; opacity: 0; }
-          15% { opacity: 1; }
-          85% { opacity: 1; }
-          100% { left: 100%; opacity: 0; }
-        }
-      `}</style>
-
-      {/* Network NOC Topology Dashboard */}
-      <div className="glass-panel" style={{ marginBottom: '30px', padding: '24px' }}>
-        <h2 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>🌐 NOC Subnet Topology Map</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', background: 'var(--color-primary-glass)', padding: '2px 8px', borderRadius: '4px', transform: 'scale(0.95)', fontWeight: 'bold' }}>Live Link Status</span>
-        </h2>
-        {agents.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            No agent nodes currently active in the topology. Register and start an agent to visualize the network links.
-          </div>
-        ) : (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            background: 'rgba(10, 13, 22, 0.4)',
-            borderRadius: 'var(--radius-md)',
-            padding: '24px',
-            border: '1px solid var(--border-glass)',
-            minHeight: '160px',
-            flexWrap: 'wrap',
-            gap: '30px'
-          }}>
-            {/* Center Node */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--color-primary)',
-              background: 'rgba(99, 102, 241, 0.08)',
-              position: 'relative',
-              minWidth: '200px',
-              textAlign: 'center',
-              boxShadow: '0 0 15px rgba(99, 102, 241, 0.15)'
-            }}>
-              <div style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                borderRadius: 'var(--radius-md)',
-                top: 0,
-                left: 0,
-                animation: 'portalPulse 2.5s infinite ease-in-out',
-                pointerEvents: 'none'
-              }}></div>
-              <span style={{ fontSize: '2rem', marginBottom: '6px' }}>🖥️</span>
-              <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#82aaff' }}>Portal Controller</span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>localhost:8082</span>
-            </div>
-
-            {/* Connecting Channels & Nodes Container */}
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '16px', 
-              flex: 1, 
-              minWidth: '280px' 
-            }}>
-              {agents.map((agent) => {
-                const isOnline = agent.status === 'ONLINE';
-                const isDegraded = agent.status === 'DEGRADED';
-                const statusColor = isOnline ? 'var(--color-success)' : isDegraded ? '#f59e0b' : 'var(--color-danger)';
-                const statusLabel = agent.status ? agent.status.charAt(0) + agent.status.slice(1).toLowerCase() : (isOnline ? 'Online' : 'Offline');
-                return (
-                  <div key={agent.id} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '16px' 
-                  }}>
-                    {/* Animated Connection Cable */}
-                    <div style={{ 
-                      flex: 1, 
-                      height: '2px', 
-                      background: isOnline 
-                        ? 'linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%)' 
-                        : 'rgba(255, 255, 255, 0.05)', 
-                      position: 'relative',
-                      minWidth: '80px',
-                      borderRadius: '1px'
-                    }}>
-                      {isOnline && (
-                        <div className="topo-packet" style={{
-                          position: 'absolute',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--color-success)',
-                          boxShadow: '0 0 10px var(--color-success)',
-                          top: '-3px',
-                          animation: 'packetStream 2.0s infinite linear'
-                        }}></div>
-                      )}
-                    </div>
-
-                    {/* Agent Node box */}
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      padding: '12px 18px',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-glass)',
-                      minWidth: '260px',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--text-primary)' }}>{agent.name}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {agent.description || 'Remote Subnet Endpoint'}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ 
-                          width: '8px', 
-                          height: '8px', 
-                          borderRadius: '50%', 
-                          backgroundColor: statusColor,
-                          boxShadow: `0 0 10px ${statusColor}`,
-                          animation: isOnline ? 'pulse 1.8s infinite' : 'none'
-                        }}></div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '700', color: isOnline ? 'var(--color-success)' : 'var(--text-muted)' }}>
-                          {statusLabel}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      />
 
       {error && (
-        <div style={{ padding: '12px', backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)', borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem' }}>
-          {error}
+        <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-center gap-2">
+          <span className="font-bold">[ERR]</span>
+          <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div style={{ padding: '12px', backgroundColor: 'var(--color-success-glass)', color: 'var(--color-success)', borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem' }}>
-          {success}
+        <div className="p-3 bg-[#00ff66]/15 border border-[#00ff66]/40 rounded-[2px] font-mono text-xs text-[#00ff66] flex items-center gap-2">
+          <span className="font-bold">[OK]</span>
+          <span>{success}</span>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1.5fr 1fr' : '1fr', gap: '30px', alignItems: 'start' }}>
+      {/* Summary Readout Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <MetricReadout label="TOTAL NODES" value={agents.length} status="neutral" icon={Radio} />
+        <MetricReadout label="ONLINE" value={onlineCount} status="green" icon={Network} />
+        <MetricReadout label="DEGRADED" value={degradedCount} status="amber" icon={Radio} />
+        <MetricReadout label="OFFLINE" value={offlineCount} status="red" icon={Radio} />
+      </div>
+
+      {/* Topology Overview */}
+      <NocPanel code="NET_MAP" title="Subnet Topology & Communication Links">
+        {agents.length === 0 ? (
+          <div className="py-8 text-center font-mono text-xs text-[#768a7b]">
+            No subnet agent nodes provisioned yet. Register a new node to establish network link telemetry.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
+            {agents.map((agent) => (
+              <div
+                key={agent.id}
+                className="p-3 bg-[#101411] border border-[#27342a] rounded-[2px] space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#d5e3d8] truncate">{agent.name}</span>
+                  <StatusIndicator status={agent.status || 'OFFLINE'} />
+                </div>
+                <div className="text-[10px] text-[#768a7b] truncate">
+                  {agent.description || 'Remote Subnet Telemetry Probe'}
+                </div>
+                <div className="pt-1 border-t border-[#27342a] flex items-center justify-between text-[10px] text-[#4e5f52]">
+                  <span>NODE #{agent.id}</span>
+                  <span>{agent.lastSeenAt ? new Date(agent.lastSeenAt).toLocaleTimeString() : 'Never Connected'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </NocPanel>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* AGENTS LIST */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '20px' }}>Active Subnet Nodes</h2>
-          
-          {loading && agents.length === 0 ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-              <div className="spinner"></div>
-            </div>
-          ) : agents.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-              No subnet agents registered yet. {isAdmin ? 'Use the form to register one.' : ''}
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+        {/* AGENTS TABLE */}
+        <div className={isAdmin ? 'lg:col-span-8' : 'lg:col-span-12'}>
+          <NocPanel code="NODES_LIST" title="Active Telemetry Node Registry" noPadding>
+            <div className="table-container border-0 rounded-none">
+              <table className="custom-table">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-glass)', textAlign: 'left' }}>
-                    <th style={{ padding: '12px 8px' }}>Name / Subnet</th>
-                    <th style={{ padding: '12px 8px' }}>Status</th>
-                    <th style={{ padding: '12px 8px' }}>Security Token</th>
-                    <th style={{ padding: '12px 8px' }}>Last Seen</th>
-                    {isAdmin && <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>}
+                  <tr>
+                    <th>NODE / SUBNET</th>
+                    <th>STATUS</th>
+                    <th>SECURITY TOKEN</th>
+                    <th>LAST SEEN</th>
+                    {isAdmin && <th className="text-right">ACTION</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {agents.map((agent) => (
-                    <tr key={agent.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '12px 8px' }}>
-                        <div style={{ fontWeight: '600' }}>{agent.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{agent.description}</div>
+                  {agents.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-8 text-[#768a7b]">
+                        No active subnet agents registered.
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        {getStatusBadge(agent.lastSeenAt, agent.status)}
-                      </td>
-                      <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>
-                            {visibleTokens[agent.id] ? agent.token : '••••••••-••••-••••-••••-••••••••••••'}
-                          </span>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '2px 6px', fontSize: '0.7rem' }}
-                            onClick={() => toggleTokenVisibility(agent.id)}
-                          >
-                            {visibleTokens[agent.id] ? 'Hide' : 'Show'}
-                          </button>
-                        </div>
-                      </td>
-                      <td style={{ padding: '12px 8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {agent.lastSeenAt ? new Date(agent.lastSeenAt).toLocaleString() : 'N/A'}
-                      </td>
-                      {isAdmin && (
-                        <td style={{ padding: '12px 8px', textAlign: 'right' }}>
-                          <button 
-                            className="btn btn-danger" 
-                            style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                            onClick={() => handleDelete(agent.id)}
-                          >
-                            Revoke
-                          </button>
-                        </td>
-                      )}
                     </tr>
-                  ))}
+                  ) : (
+                    agents.map((agent) => (
+                      <tr key={agent.id}>
+                        <td>
+                          <div className="font-bold text-[#d5e3d8]">{agent.name}</div>
+                          <div className="text-[10px] text-[#768a7b]">{agent.description}</div>
+                        </td>
+                        <td>
+                          <StatusIndicator status={agent.status || 'OFFLINE'} />
+                        </td>
+                        <td className="font-mono text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#00ff66]">
+                              {visibleTokens[agent.id] ? agent.token : '••••••••-••••-••••-••••••••'}
+                            </span>
+                            <RetroButton 
+                              variant="ghost" 
+                              size="sm"
+                              icon={visibleTokens[agent.id] ? EyeOff : Eye}
+                              onClick={() => toggleTokenVisibility(agent.id)}
+                            >
+                              {visibleTokens[agent.id] ? 'Hide' : 'Show'}
+                            </RetroButton>
+                          </div>
+                        </td>
+                        <td className="text-[11px] text-[#768a7b]">
+                          {agent.lastSeenAt ? new Date(agent.lastSeenAt).toLocaleString() : 'N/A'}
+                        </td>
+                        {isAdmin && (
+                          <td className="text-right">
+                            <RetroButton 
+                              variant="danger" 
+                              size="sm"
+                              icon={Trash2}
+                              onClick={() => handleDelete(agent.id)}
+                            >
+                              Revoke
+                            </RetroButton>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
-          )}
+          </NocPanel>
         </div>
 
         {/* REGISTER & DEPLOYMENT OPTIONS */}
         {isAdmin && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="lg:col-span-4 space-y-6">
             {/* REGISTER FORM */}
-            <div className="glass-panel" style={{ padding: '24px' }}>
-              <h2 style={{ fontSize: '1.2rem', marginBottom: '20px' }}>Register New Node</h2>
-              <form onSubmit={handleRegister}>
+            <NocPanel code="PROVISION_NODE" title="Register Vantage Agent">
+              <form onSubmit={handleRegister} className="space-y-3 font-mono text-xs">
                 <div className="form-group">
-                  <label className="form-label">Agent Node Name</label>
+                  <label className="form-label">Node Identifier</label>
                   <input 
                     type="text" 
                     className="form-control" 
-                    placeholder="e.g. Subnet-A-VantagePoint"
+                    placeholder="Subnet-A-Probe"
                     value={name}
                     onChange={e => setName(e.target.value)}
                     required 
@@ -381,35 +241,38 @@ export const Agents = () => {
                   <label className="form-label">Subnet / Description</label>
                   <textarea 
                     className="form-control" 
-                    placeholder="e.g. 192.168.10.0/24 - AWS Oregon VPC"
-                    style={{ minHeight: '60px' }}
+                    placeholder="192.168.10.0/24 - Oregon Subnet"
+                    rows={2}
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                   />
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={isRegistering}>
-                  {isRegistering ? 'Registering...' : 'Generate Node Token'}
-                </button>
+                <RetroButton 
+                  type="submit" 
+                  variant="primary" 
+                  fullWidth 
+                  disabled={isRegistering}
+                  icon={Plus}
+                >
+                  {isRegistering ? 'Generating...' : 'Generate Node Token'}
+                </RetroButton>
               </form>
-            </div>
+            </NocPanel>
 
             {/* DEPLOYMENT GUIDE */}
-            <div className="glass-panel" style={{ padding: '24px', background: 'var(--bg-glass)' }}>
-              <h2 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>🚀 Agent Run Instructions</span>
-              </h2>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                Run the python client on the target subnet host to make it available for distributed pings and bandwidth tests:
-              </p>
-              <pre style={{ background: '#0a0d16', padding: '12px', borderRadius: '4px', fontSize: '0.75rem', overflowX: 'auto', border: '1px solid var(--border-glass)', color: '#82aaff', marginTop: '12px' }}>
-{`# 1. Set environment configurations
-export PORTAL_SERVER_URL="${window.location.protocol}//${window.location.host}"
-export AGENT_TOKEN="<your-node-token>"
+            <NocPanel code="DEPLOY_INSTRUCTIONS" title="Node Run Instructions">
+              <div className="space-y-2 font-mono text-xs text-[#768a7b]">
+                <p>
+                  Deploy the Python worker daemon on target subnet host:
+                </p>
+                <pre className="p-2.5 bg-[#0a0d0b] border border-[#27342a] rounded-[2px] text-[#00ff66] text-[10px] overflow-x-auto whitespace-pre-wrap">
+{`export PORTAL_SERVER_URL="${window.location.protocol}//${window.location.host}"
+export AGENT_TOKEN="<node-token>"
 
-# 2. Run agent script
 python3 python-agent/agent_client.py`}
-              </pre>
-            </div>
+                </pre>
+              </div>
+            </NocPanel>
           </div>
         )}
 
@@ -417,3 +280,5 @@ python3 python-agent/agent_client.py`}
     </div>
   );
 };
+
+export default Agents;

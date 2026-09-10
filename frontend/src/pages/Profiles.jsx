@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { Plus, RotateCw, Play, History, Edit3, Trash2, Clock, Activity, X } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 const validateHostOrIp = (value) => {
   if (!value) return false;
@@ -98,10 +100,10 @@ export const Profiles = () => {
 
   const fetchAvailableAgents = async () => {
     try {
-      const data = await api.get('/agents');
-      setAvailableAgents(data);
-    } catch (err) {
-      console.error('Failed to load agents', err);
+      const agents = await api.get('/agents');
+      setAvailableAgents(agents || []);
+    } catch (e) {
+      console.error('Failed to fetch agents', e);
     }
   };
 
@@ -130,9 +132,9 @@ export const Profiles = () => {
 
   const openEditForm = (profile) => {
     setEditingProfile(profile);
-    setName(profile.name);
+    setName(profile.name || '');
     setDescription(profile.description || '');
-    setProtocol(profile.protocol);
+    setProtocol(profile.protocol || 'PING');
     setHost(profile.host || '');
     setServer(profile.server || '');
     setCount(profile.count || 5);
@@ -141,39 +143,50 @@ export const Profiles = () => {
     setNotes(profile.notes || '');
     setScheduleEnabled(profile.scheduleEnabled || false);
     setCronExpression(profile.cronExpression || '0 0 * * * *');
-    
-    const presets = ['0 */5 * * * *', '0 */15 * * * *', '0 0 * * * *', '0 0 */12 * * *', '0 0 0 * * *'];
-    if (profile.cronExpression && presets.includes(profile.cronExpression)) {
-      setCronPreset(profile.cronExpression);
-      setIsCustomCron(false);
-    } else if (profile.cronExpression) {
-      setCronPreset('CUSTOM');
-      setIsCustomCron(true);
-    } else {
-      setCronPreset('0 0 * * * *');
-      setIsCustomCron(false);
-    }
+    setCronPreset(profile.cronExpression || 'CUSTOM');
+    setIsCustomCron(!['0 */5 * * * *', '0 */15 * * * *', '0 0 * * * *', '0 0 */12 * * *', '0 0 0 * * *'].includes(profile.cronExpression));
     setIsFormOpen(true);
+  };
+
+  const openTriggerModal = (profile) => {
+    setSelectedProfile(profile);
+    setHostOverride('');
+    setServerOverride('');
+    setCountOverride('');
+    setDurationSecondsOverride('');
+    setPortOverride('');
+    setSelectedAgentId('');
+    setIsTriggerOpen(true);
+  };
+
+  const handleDeleteProfile = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this test profile?')) return;
+    try {
+      await api.delete(`/profiles/${id}`);
+      setProfiles(profiles.filter(p => p.id !== id));
+    } catch (err) {
+      alert(err.message || 'Failed to delete profile.');
+    }
   };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Input Sanitization & Validations
+    // Sanitization & Validation
     if (protocol === 'PING') {
       if (!validateHostOrIp(host)) {
-        setError('Invalid Target Host. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell characters.');
+        setError('Invalid Target Host. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell metacharacters.');
         return;
       }
       const countInt = parseInt(count);
       if (isNaN(countInt) || countInt < 1 || countInt > 50) {
-        setError('Ping count must be between 1 and 50.');
+        setError('Ping count must be an integer between 1 and 50.');
         return;
       }
     } else {
       if (!validateHostOrIp(server)) {
-        setError('Invalid iPerf Server Host. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell characters.');
+        setError('Invalid iPerf Server Host. Must be a valid domain name, IPv4, or IPv6 address without spaces or shell metacharacters.');
         return;
       }
       const portInt = parseInt(port);
@@ -188,15 +201,7 @@ export const Profiles = () => {
       }
     }
 
-    if (scheduleEnabled) {
-      const parts = cronExpression.trim().split(/\s+/);
-      if (parts.length < 5 || parts.length > 6) {
-        setError('Invalid Cron Expression. Must be a valid standard cron expression (5 or 6 fields).');
-        return;
-      }
-    }
-
-    const body = {
+    const payload = {
       name: name.trim(),
       description: description.trim(),
       protocol,
@@ -206,43 +211,22 @@ export const Profiles = () => {
       durationSeconds: protocol === 'IPERF' ? parseInt(durationSeconds) : null,
       port: protocol === 'IPERF' ? parseInt(port) : null,
       notes: notes.trim(),
-      cronExpression: scheduleEnabled ? cronExpression.trim() : null,
-      scheduleEnabled
+      scheduleEnabled,
+      cronExpression: scheduleEnabled ? cronExpression.trim() : null
     };
 
     try {
       if (editingProfile) {
-        const updated = await api.put(`/profiles/${editingProfile.id}`, body);
-        setProfiles(profiles.map(p => p.id === editingProfile.id ? updated : p));
+        const updated = await api.put(`/profiles/${editingProfile.id}`, payload);
+        setProfiles(profiles.map(p => p.id === updated.id ? updated : p));
       } else {
-        const created = await api.post('/profiles', body);
+        const created = await api.post('/profiles', payload);
         setProfiles([...profiles, created]);
       }
       setIsFormOpen(false);
     } catch (err) {
-      setError(err.message || 'Failed to save profile.');
+      setError(err.message || 'Failed to save test profile.');
     }
-  };
-
-  const handleDeleteProfile = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this test profile?')) return;
-    try {
-      await api.delete(`/profiles/${id}`);
-      setProfiles(profiles.filter(p => p.id !== id));
-    } catch (err) {
-      alert(err.message || 'Failed to delete profile.');
-    }
-  };
-
-  const openTriggerModal = (profile) => {
-    setSelectedProfile(profile);
-    setHostOverride('');
-    setServerOverride('');
-    setCountOverride('');
-    setDurationSecondsOverride('');
-    setPortOverride('');
-    setSelectedAgentId('');
-    setIsTriggerOpen(true);
   };
 
   const handleTriggerJob = async (e) => {
@@ -300,7 +284,6 @@ export const Profiles = () => {
       agentId: selectedAgentId ? parseInt(selectedAgentId) : null
     };
 
-
     try {
       await api.post('/jobs', body);
       setIsTriggerOpen(false);
@@ -324,433 +307,458 @@ export const Profiles = () => {
 
   if (loading && profiles.length === 0) {
     return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner"></div>
-        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)' }}>Loading test profiles...</span>
+      <div className="container flex justify-center items-center h-[60vh] font-mono text-xs text-[#768a7b]">
+        <span>[SYS.INFO] Loading diagnostic profiles...</span>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ marginBottom: '4px' }}>Test Profiles</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Configure test environments and execute PING or IPERF3 diagnostics.</p>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          {(user.role === 'ADMIN' || user.role === 'OPERATOR') && (
-            <button className="btn btn-primary" onClick={openCreateForm}>
-              Create Profile
-            </button>
-          )}
-          <button className="btn btn-secondary" onClick={fetchProfiles} disabled={loading}>
-            Refresh
-          </button>
-        </div>
-      </div>
+    <div className="container space-y-6">
+      <SectionHeader
+        code="SYS_PROFILES"
+        title="Diagnostic Test Profiles"
+        subtitle="Configure target hosts, ping parameters, and cron scheduling"
+        actions={
+          <>
+            {(user.role === 'ADMIN' || user.role === 'OPERATOR') && (
+              <RetroButton variant="primary" icon={Plus} onClick={openCreateForm}>
+                Create Profile
+              </RetroButton>
+            )}
+            <RetroButton variant="secondary" icon={RotateCw} onClick={fetchProfiles} disabled={loading}>
+              Refresh
+            </RetroButton>
+          </>
+        }
+      />
 
       {error && (
-        <div 
-          style={{ 
-            padding: '16px', 
-            backgroundColor: 'var(--color-danger-glass)', 
-            color: 'var(--color-danger)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: '24px',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}
-        >
-          {error}
+        <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-center gap-2">
+          <span className="font-bold">[ERR]</span>
+          <span>{error}</span>
         </div>
       )}
 
       {/* Profiles Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {profiles.length === 0 ? (
-          <div className="glass-panel" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}>
-            <p style={{ color: 'var(--text-muted)', margin: 0 }}>No test profiles created yet. Click "Create Profile" to start.</p>
+          <div className="col-span-full">
+            <NocPanel code="INFO">
+              <div className="text-center text-xs font-mono text-[#768a7b] py-6">
+                No diagnostic test profiles provisioned yet. Click "Create Profile" to start.
+              </div>
+            </NocPanel>
           </div>
         ) : (
           profiles.map((p) => (
-            <div key={p.id} className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{p.name}</h3>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {p.scheduleEnabled && (
-                      <span className="badge" style={{ backgroundColor: 'var(--color-warning-glass)', color: 'var(--color-warning)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                        CRON
-                      </span>
-                    )}
-                    <span className={`badge ${p.protocol === 'PING' ? 'badge-running' : 'badge-success'}`}>
-                      {p.protocol}
-                    </span>
-                  </div>
+            <NocPanel
+              key={p.id}
+              code={`PRF-${p.id}`}
+              title={p.name}
+              badge={
+                <div className="flex items-center gap-1.5">
+                  {p.scheduleEnabled && (
+                    <StatusIndicator status="WARNING" text="CRON" pulse={false} />
+                  )}
+                  <StatusIndicator 
+                    status={p.protocol === 'PING' ? 'RUNNING' : 'SUCCESS'} 
+                    text={p.protocol} 
+                    pulse={false}
+                  />
                 </div>
-                <p style={{ fontSize: '0.85rem', marginBottom: '16px', color: 'var(--text-secondary)' }}>
+              }
+            >
+              <div className="space-y-3 font-mono text-xs">
+                <p className="text-[#768a7b] text-[11px] line-clamp-2">
                   {p.description || 'No description provided.'}
                 </p>
 
-                <div style={{ background: 'rgba(10, 13, 22, 0.4)', padding: '12px', borderRadius: 'var(--radius-sm)', marginBottom: '16px' }}>
+                <div className="bg-[#101411] border border-[#27342a] p-2.5 rounded-[2px] space-y-1 text-[11px]">
                   {p.protocol === 'PING' ? (
-                    <div style={{ fontSize: '0.85rem', display: 'grid', gridTemplateColumns: '80px 1fr', gap: '4px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Target Host:</span>
-                      <code style={{ color: 'var(--color-info)' }}>{p.host}</code>
-                      <span style={{ color: 'var(--text-muted)' }}>Pings:</span>
-                      <span>{p.count} packets</span>
-                      {p.scheduleEnabled && (
-                        <>
-                          <span style={{ color: 'var(--text-muted)' }}>Schedule:</span>
-                          <span style={{ color: 'var(--color-warning)', fontSize: '0.8rem', fontFamily: 'monospace' }}>{p.cronExpression}</span>
-                        </>
-                      )}
-                    </div>
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-[#768a7b]">Target Host:</span>
+                        <span className="text-[#00bfff] font-bold">{p.host}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#768a7b]">Ping Count:</span>
+                        <span className="text-[#d5e3d8]">{p.count} packets</span>
+                      </div>
+                    </>
                   ) : (
-                    <div style={{ fontSize: '0.85rem', display: 'grid', gridTemplateColumns: '80px 1fr', gap: '4px' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Server Host:</span>
-                      <code style={{ color: 'var(--color-success)' }}>{p.server}</code>
-                      <span style={{ color: 'var(--text-muted)' }}>Port:</span>
-                      <span>{p.port}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>Duration:</span>
-                      <span>{p.durationSeconds} seconds</span>
-                      {p.scheduleEnabled && (
-                        <>
-                          <span style={{ color: 'var(--text-muted)' }}>Schedule:</span>
-                          <span style={{ color: 'var(--color-warning)', fontSize: '0.8rem', fontFamily: 'monospace' }}>{p.cronExpression}</span>
-                        </>
-                      )}
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-[#768a7b]">Server Host:</span>
+                        <span className="text-[#00ff66] font-bold">{p.server}:{p.port}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[#768a7b]">Duration:</span>
+                        <span className="text-[#d5e3d8]">{p.durationSeconds}s</span>
+                      </div>
+                    </>
+                  )}
+                  {p.scheduleEnabled && (
+                    <div className="flex justify-between border-t border-[#27342a] pt-1 mt-1">
+                      <span className="text-[#768a7b]">Cron Schedule:</span>
+                      <span className="text-[#ffb000] font-bold">{p.cronExpression}</span>
                     </div>
                   )}
                 </div>
 
                 {p.notes && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '16px' }}>
+                  <div className="text-[10px] text-[#4e5f52] italic truncate">
                     * {p.notes}
                   </div>
                 )}
-              </div>
 
-              <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '16px', marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  By: {p.createdByUsername}
-                </span>
+                <div className="pt-2 border-t border-[#27342a] flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-[#768a7b]">
+                    By: {p.createdByUsername}
+                  </span>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {isAuthorizedToModify(p) && (
-                    <>
-                      <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openEditForm(p)}>
-                        Edit
-                      </button>
-                      <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => handleDeleteProfile(p.id)}>
-                        Delete
-                      </button>
-                    </>
-                  )}
-                  <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openHistoryModal(p)}>
-                    History
-                  </button>
-                  {canTrigger && (
-                    <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => openTriggerModal(p)}>
-                      Run Test
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {isAuthorizedToModify(p) && (
+                      <>
+                        <RetroButton variant="ghost" size="sm" icon={Edit3} onClick={() => openEditForm(p)}>
+                          Edit
+                        </RetroButton>
+                        <RetroButton variant="danger" size="sm" icon={Trash2} onClick={() => handleDeleteProfile(p.id)}>
+                          Del
+                        </RetroButton>
+                      </>
+                    )}
+                    <RetroButton variant="secondary" size="sm" icon={History} onClick={() => openHistoryModal(p)}>
+                      Hist
+                    </RetroButton>
+                    {canTrigger && (
+                      <RetroButton variant="primary" size="sm" icon={Play} onClick={() => openTriggerModal(p)}>
+                        Run
+                      </RetroButton>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </NocPanel>
           ))
         )}
       </div>
 
-      {/* CREATE / EDIT PROFILE FORM (MODAL-LIKE OVERLAY) */}
+      {/* CREATE / EDIT PROFILE MODAL */}
       {isFormOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ marginBottom: '20px' }}>{editingProfile ? 'Edit Test Profile' : 'Create Test Profile'}</h2>
-            <form onSubmit={handleSaveProfile}>
-              <div className="form-group">
-                <label className="form-label">Profile Name</label>
-                <input type="text" className="form-control" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Production Gateway Ping" />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Description</label>
-                <textarea className="form-control" style={{ resize: 'vertical', minHeight: '60px' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe the purpose of this profile" />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Protocol</label>
-                <select className="form-control" value={protocol} onChange={e => setProtocol(e.target.value)}>
-                  <option value="PING">PING (ICMP Latency check)</option>
-                  <option value="IPERF">IPERF (Throughput check)</option>
-                </select>
-              </div>
-
-              {protocol === 'PING' ? (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Target Host IP / Domain</label>
-                    <input type="text" className="form-control" required value={host} onChange={e => setHost(e.target.value)} placeholder="e.g. 8.8.8.8" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Ping Count</label>
-                    <input type="number" className="form-control" min="1" max="50" required value={count} onChange={e => setCount(e.target.value)} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">iPerf Server Host</label>
-                    <input type="text" className="form-control" required value={server} onChange={e => setServer(e.target.value)} placeholder="e.g. iperf.he.net" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Port</label>
-                    <input type="number" className="form-control" min="1024" max="65535" required value={port} onChange={e => setPort(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Duration (seconds)</label>
-                    <input type="number" className="form-control" min="2" max="60" required value={durationSeconds} onChange={e => setDurationSeconds(e.target.value)} />
-                  </div>
-                </>
-              )}
-
-              {/* Scheduling Config */}
-              <div className="glass-panel" style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: scheduleEnabled ? '12px' : 0 }}>
+        <div className="fixed inset-0 bg-[#0a0d0b]/90 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg">
+            <NocPanel
+              code="SYS.CONFIG"
+              title={editingProfile ? 'Edit Test Profile' : 'Create Test Profile'}
+              action={
+                <RetroButton variant="ghost" size="sm" icon={X} onClick={() => setIsFormOpen(false)}>
+                  Close
+                </RetroButton>
+              }
+            >
+              <form onSubmit={handleSaveProfile} className="space-y-3 font-mono text-xs">
+                <div className="form-group">
+                  <label className="form-label">Profile Name</label>
                   <input 
-                    type="checkbox" 
-                    id="scheduleEnabled" 
-                    checked={scheduleEnabled} 
-                    onChange={e => setScheduleEnabled(e.target.checked)} 
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    type="text" 
+                    className="form-control" 
+                    required 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                    placeholder="Gateway Ping Probe" 
                   />
-                  <label htmlFor="scheduleEnabled" style={{ fontWeight: '600', cursor: 'pointer', margin: 0 }}>
-                    Enable Automated Cron Scheduling
-                  </label>
                 </div>
 
-                {scheduleEnabled && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Check Interval</label>
-                      <select 
-                        className="form-control" 
-                        value={cronPreset} 
-                        onChange={e => {
-                          const val = e.target.value;
-                          setCronPreset(val);
-                          if (val !== 'CUSTOM') {
-                            setCronExpression(val);
-                            setIsCustomCron(false);
-                          } else {
-                            setIsCustomCron(true);
-                          }
-                        }}
-                      >
-                        <option value="0 */5 * * * *">Every 5 Minutes</option>
-                        <option value="0 */15 * * * *">Every 15 Minutes</option>
-                        <option value="0 0 * * * *">Hourly</option>
-                        <option value="0 0 */12 * * *">Every 12 Hours</option>
-                        <option value="0 0 0 * * *">Daily</option>
-                        <option value="CUSTOM">Custom Cron Expression</option>
-                      </select>
-                    </div>
+                <div className="form-group">
+                  <label className="form-label">Description</label>
+                  <textarea 
+                    className="form-control" 
+                    rows={2}
+                    value={description} 
+                    onChange={e => setDescription(e.target.value)} 
+                    placeholder="Describe purpose" 
+                  />
+                </div>
 
-                    {isCustomCron && (
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Custom Cron Expression (6 fields: sec min hour day mon dow)</label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          required 
-                          value={cronExpression} 
-                          onChange={e => setCronExpression(e.target.value)} 
-                          placeholder="e.g. 0 0/30 8-18 * * *" 
-                        />
-                      </div>
-                    )}
+                <div className="form-group">
+                  <label className="form-label">Protocol</label>
+                  <select className="form-control" value={protocol} onChange={e => setProtocol(e.target.value)}>
+                    <option value="PING">PING (ICMP Latency check)</option>
+                    <option value="IPERF">IPERF (Throughput check)</option>
+                  </select>
+                </div>
+
+                {protocol === 'PING' ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2 form-group">
+                      <label className="form-label">Target Host IP / Domain</label>
+                      <input type="text" className="form-control" required value={host} onChange={e => setHost(e.target.value)} placeholder="8.8.8.8" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Ping Count</label>
+                      <input type="number" className="form-control" min="1" max="50" required value={count} onChange={e => setCount(e.target.value)} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="form-group">
+                      <label className="form-label">Server Host</label>
+                      <input type="text" className="form-control" required value={server} onChange={e => setServer(e.target.value)} placeholder="iperf.server.net" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Port</label>
+                      <input type="number" className="form-control" min="1024" max="65535" required value={port} onChange={e => setPort(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Duration (s)</label>
+                      <input type="number" className="form-control" min="2" max="60" required value={durationSeconds} onChange={e => setDurationSeconds(e.target.value)} />
+                    </div>
                   </div>
                 )}
-              </div>
 
-              <div className="form-group">
-                <label className="form-label">Internal Notes</label>
-                <input type="text" className="form-control" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Requires local utility permissions" />
-              </div>
+                {/* Scheduling Config */}
+                <div className="p-3 bg-[#101411] border border-[#27342a] rounded-[2px] space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="scheduleEnabled" 
+                      checked={scheduleEnabled} 
+                      onChange={e => setScheduleEnabled(e.target.checked)} 
+                      className="cursor-pointer"
+                    />
+                    <label htmlFor="scheduleEnabled" className="form-label mb-0 cursor-pointer text-[#d5e3d8]">
+                      Enable Automated Cron Scheduling
+                    </label>
+                  </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsFormOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingProfile ? 'Save Changes' : 'Create Profile'}
-                </button>
-              </div>
-            </form>
+                  {scheduleEnabled && (
+                    <div className="space-y-2 pt-2 border-t border-[#27342a]">
+                      <div className="form-group mb-0">
+                        <label className="form-label">Check Interval</label>
+                        <select 
+                          className="form-control" 
+                          value={cronPreset} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            setCronPreset(val);
+                            if (val !== 'CUSTOM') {
+                              setCronExpression(val);
+                              setIsCustomCron(false);
+                            } else {
+                              setIsCustomCron(true);
+                            }
+                          }}
+                        >
+                          <option value="0 */5 * * * *">Every 5 Minutes</option>
+                          <option value="0 */15 * * * *">Every 15 Minutes</option>
+                          <option value="0 0 * * * *">Hourly</option>
+                          <option value="0 0 */12 * * *">Every 12 Hours</option>
+                          <option value="0 0 0 * * *">Daily</option>
+                          <option value="CUSTOM">Custom Cron Expression</option>
+                        </select>
+                      </div>
+
+                      {isCustomCron && (
+                        <div className="form-group mb-0">
+                          <label className="form-label">Cron Expression (sec min hr dom mon dow)</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            required 
+                            value={cronExpression} 
+                            onChange={e => setCronExpression(e.target.value)} 
+                            placeholder="0 0/30 8-18 * * *" 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Internal Notes</label>
+                  <input type="text" className="form-control" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Internal notes" />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-[#27342a]">
+                  <RetroButton variant="secondary" onClick={() => setIsFormOpen(false)}>
+                    Cancel
+                  </RetroButton>
+                  <RetroButton type="submit" variant="primary">
+                    {editingProfile ? 'Save Changes' : 'Create Profile'}
+                  </RetroButton>
+                </div>
+              </form>
+            </NocPanel>
           </div>
         </div>
       )}
 
-      {/* TRIGGER OVERRIDES PROMPT MODAL */}
+      {/* TRIGGER OVERRIDES MODAL */}
       {isTriggerOpen && selectedProfile && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '450px' }}>
-            <h2 style={{ marginBottom: '8px' }}>Trigger Network Test</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              Modify settings to override variables for this run, or leave them empty to use default profile parameters.
-            </p>
-            <form onSubmit={handleTriggerJob}>
-              {selectedProfile.protocol === 'PING' ? (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Host Override (Default: {selectedProfile.host})</label>
-                    <input type="text" className="form-control" value={hostOverride} onChange={e => setHostOverride(e.target.value)} placeholder="Enter override IP/domain" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Count Override (Default: {selectedProfile.count})</label>
-                    <input type="number" className="form-control" min="1" max="50" value={countOverride} onChange={e => setCountOverride(e.target.value)} placeholder="Enter custom ping count" />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Server Override (Default: {selectedProfile.server})</label>
-                    <input type="text" className="form-control" value={serverOverride} onChange={e => setServerOverride(e.target.value)} placeholder="Enter override server address" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Port Override (Default: {selectedProfile.port})</label>
-                    <input type="number" className="form-control" min="1024" max="65535" value={portOverride} onChange={e => setPortOverride(e.target.value)} placeholder="Enter custom iPerf port" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Duration Override (Default: {selectedProfile.durationSeconds}s)</label>
-                    <input type="number" className="form-control" min="2" max="60" value={durationSecondsOverride} onChange={e => setDurationSecondsOverride(e.target.value)} placeholder="Enter custom test duration" />
-                  </div>
-                </>
-              )}
+        <div className="fixed inset-0 bg-[#0a0d0b]/90 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <NocPanel
+              code="SYS.EXEC"
+              title="Trigger Diagnostic Job"
+              action={
+                <RetroButton variant="ghost" size="sm" icon={X} onClick={() => setIsTriggerOpen(false)}>
+                  Close
+                </RetroButton>
+              }
+            >
+              <form onSubmit={handleTriggerJob} className="space-y-3 font-mono text-xs">
+                <p className="text-[#768a7b] text-[11px]">
+                  Specify execution overrides or leave blank to use profile defaults.
+                </p>
 
-              <div className="form-group" style={{ marginTop: '16px' }}>
-                <label className="form-label">Execution Node</label>
-                <select className="form-control" value={selectedAgentId} onChange={e => setSelectedAgentId(e.target.value)}>
-                  <option value="">Local Server (Default)</option>
-                  {availableAgents.map(agent => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.name} {agent.description ? `(${agent.description})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {selectedProfile.protocol === 'PING' ? (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Host Override (Default: {selectedProfile.host})</label>
+                      <input type="text" className="form-control" value={hostOverride} onChange={e => setHostOverride(e.target.value)} placeholder="IP or Domain" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Count Override (Default: {selectedProfile.count})</label>
+                      <input type="number" className="form-control" min="1" max="50" value={countOverride} onChange={e => setCountOverride(e.target.value)} placeholder="Ping count" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Server Override (Default: {selectedProfile.server})</label>
+                      <input type="text" className="form-control" value={serverOverride} onChange={e => setServerOverride(e.target.value)} placeholder="Server host" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Port Override (Default: {selectedProfile.port})</label>
+                      <input type="number" className="form-control" min="1024" max="65535" value={portOverride} onChange={e => setPortOverride(e.target.value)} placeholder="iPerf port" />
+                    </div>
+                  </>
+                )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsTriggerOpen(false)} disabled={isTriggering}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={isTriggering}>
-                  {isTriggering ? 'Queuing...' : 'Execute Now'}
-                </button>
-              </div>
-            </form>
+                <div className="form-group">
+                  <label className="form-label">Execution Agent</label>
+                  <select className="form-control" value={selectedAgentId} onChange={e => setSelectedAgentId(e.target.value)}>
+                    <option value="">Local Portal Core (Default)</option>
+                    {availableAgents.map(agent => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name} ({agent.status || 'UNKNOWN'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-[#27342a]">
+                  <RetroButton variant="secondary" onClick={() => setIsTriggerOpen(false)} disabled={isTriggering}>
+                    Cancel
+                  </RetroButton>
+                  <RetroButton type="submit" variant="primary" disabled={isTriggering} icon={Play}>
+                    {isTriggering ? 'Queuing...' : 'Execute Now'}
+                  </RetroButton>
+                </div>
+              </form>
+            </NocPanel>
           </div>
         </div>
       )}
 
       {/* HISTORY GRAPH MODAL */}
       {isHistoryOpen && selectedProfile && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-glass)', paddingBottom: '12px' }}>
-              <h2 style={{ margin: 0 }}>{selectedProfile.name} - Performance History</h2>
-              <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.8rem' }} onClick={() => setIsHistoryOpen(false)}>
-                Close
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-[#0a0d0b]/90 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl">
+            <NocPanel
+              code="SYS.HIST"
+              title={`${selectedProfile.name} // Performance History`}
+              action={
+                <RetroButton variant="ghost" size="sm" icon={X} onClick={() => setIsHistoryOpen(false)}>
+                  Close
+                </RetroButton>
+              }
+            >
+              {historyLoading && (
+                <div className="py-12 text-center font-mono text-xs text-[#768a7b]">
+                  [SYS.INFO] Fetching metric telemetry history...
+                </div>
+              )}
 
-            {historyLoading && (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '50px', gap: '8px', alignItems: 'center' }}>
-                <div className="spinner"></div>
-                <span style={{ color: 'var(--text-secondary)' }}>Loading history data...</span>
-              </div>
-            )}
+              {historyError && (
+                <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333]">
+                  [ERR] {historyError}
+                </div>
+              )}
 
-            {historyError && (
-              <div style={{ padding: '12px', backgroundColor: 'var(--color-danger-glass)', color: 'var(--color-danger)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem' }}>
-                {historyError}
-              </div>
-            )}
+              {!historyLoading && !historyError && historyData.length === 0 && (
+                <div className="py-12 text-center font-mono text-xs text-[#768a7b]">
+                  No execution history found for this profile.
+                </div>
+              )}
 
-            {!historyLoading && !historyError && historyData.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                No execution history found for this profile. Run a test first to generate metrics.
-              </div>
-            )}
+              {!historyLoading && !historyError && historyData.length > 0 && (
+                <div className="space-y-6 font-mono">
+                  <div className="text-xs text-[#768a7b]">
+                    Showing metric telemetry over last {historyData.length} executions.
+                  </div>
 
-            {!historyLoading && !historyError && historyData.length > 0 && (
-              <div>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-                  Showing metrics over the last {historyData.length} executions.
-                </p>
+                  {/* Chart 1: Latency / Throughput */}
+                  <div>
+                    <h4 className="text-xs font-bold text-[#d5e3d8] mb-2 uppercase">
+                      {selectedProfile.protocol === 'PING' ? '// RTT Latency (ms)' : '// Throughput (Mbps)'}
+                    </h4>
+                    <div className="h-56 w-full bg-[#101411] border border-[#27342a] p-2 rounded-[2px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={historyData.map(d => ({
+                          time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                          latency: d.rttAvgMs,
+                          throughput: d.throughputMbps,
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#27342a" />
+                          <XAxis dataKey="time" stroke="#768a7b" fontSize={10} tickLine={false} />
+                          <YAxis stroke="#768a7b" fontSize={10} tickLine={false} unit={selectedProfile.protocol === 'PING' ? 'ms' : 'Mbps'} />
+                          <Tooltip 
+                            contentStyle={{ background: '#101411', border: '1px solid #27342a', fontSize: '11px', fontFamily: 'IBM Plex Mono' }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'IBM Plex Mono' }} />
+                          {selectedProfile.protocol === 'PING' ? (
+                            <Line type="monotone" dataKey="latency" name="RTT Avg (ms)" stroke="#00ff66" strokeWidth={2} dot={{ r: 3 }} />
+                          ) : (
+                            <Line type="monotone" dataKey="throughput" name="Throughput (Mbps)" stroke="#00bfff" strokeWidth={2} dot={{ r: 3 }} />
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
-                {/* Latency / Throughput Line Chart */}
-                <div style={{ marginBottom: '30px' }}>
-                  <h4 style={{ marginBottom: '12px', color: 'var(--text-primary)' }}>
-                    {selectedProfile.protocol === 'PING' ? 'Average Latency (RTT Avg)' : 'Throughput'}
-                  </h4>
-                  <div style={{ width: '100%', height: '240px' }}>
-                    <ResponsiveContainer>
-                      <LineChart data={historyData.map(d => ({
-                        time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        latency: d.rttAvgMs,
-                        throughput: d.throughputMbps,
-                      }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                        <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} unit={selectedProfile.protocol === 'PING' ? ' ms' : ' Mbps'} />
-                        <Tooltip 
-                          contentStyle={{ background: '#0a0d16', border: '1px solid var(--border-glass)', borderRadius: '6px' }}
-                          labelStyle={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
-                        {selectedProfile.protocol === 'PING' ? (
-                          <Line type="monotone" dataKey="latency" name="Latency (ms)" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                        ) : (
-                          <Line type="monotone" dataKey="throughput" name="Throughput (Mbps)" stroke="var(--color-success)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                        )}
-                      </LineChart>
-                    </ResponsiveContainer>
+                  {/* Chart 2: Packet Loss */}
+                  <div>
+                    <h4 className="text-xs font-bold text-[#d5e3d8] mb-2 uppercase">
+                      // Packet Loss & Jitter
+                    </h4>
+                    <div className="h-56 w-full bg-[#101411] border border-[#27342a] p-2 rounded-[2px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={historyData.map(d => ({
+                          time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                          loss: d.packetLossPct,
+                          jitter: d.jitterMs
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#27342a" />
+                          <XAxis dataKey="time" stroke="#768a7b" fontSize={10} tickLine={false} />
+                          <YAxis stroke="#768a7b" fontSize={10} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ background: '#101411', border: '1px solid #27342a', fontSize: '11px', fontFamily: 'IBM Plex Mono' }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'IBM Plex Mono' }} />
+                          <Line type="monotone" dataKey="loss" name="Packet Loss (%)" stroke="#ff3333" strokeWidth={2} dot={{ r: 3 }} />
+                          {selectedProfile.protocol === 'IPERF' && (
+                            <Line type="monotone" dataKey="jitter" name="Jitter (ms)" stroke="#ffb000" strokeWidth={2} dot={{ r: 3 }} />
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
-
-                {/* Packet Loss & Jitter Line Chart */}
-                <div>
-                  <h4 style={{ marginBottom: '12px', color: 'var(--text-primary)' }}>Packet Loss & Jitter</h4>
-                  <div style={{ width: '100%', height: '240px' }}>
-                    <ResponsiveContainer>
-                      <LineChart data={historyData.map(d => ({
-                        time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                        loss: d.packetLossPct,
-                        jitter: d.jitterMs
-                      }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                        <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                        <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                        <Tooltip 
-                          contentStyle={{ background: '#0a0d16', border: '1px solid var(--border-glass)', borderRadius: '6px' }}
-                          labelStyle={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}
-                        />
-                        <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
-                        <Line type="monotone" dataKey="loss" name="Packet Loss (%)" stroke="var(--color-danger)" strokeWidth={2} dot={{ r: 3 }} />
-                        {selectedProfile.protocol === 'IPERF' && (
-                          <Line type="monotone" dataKey="jitter" name="Jitter (ms)" stroke="var(--color-warning)" strokeWidth={2} dot={{ r: 3 }} />
-                        )}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
+            </NocPanel>
           </div>
         </div>
       )}

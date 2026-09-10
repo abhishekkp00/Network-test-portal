@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
+import { RotateCw, FileText, Shield } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 export const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -33,102 +35,88 @@ export const AuditLogs = () => {
 
   if (loading && logs.length === 0) {
     return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner"></div>
-        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)' }}>Loading audit logs...</span>
+      <div className="container flex justify-center items-center h-[60vh] font-mono text-xs text-[#768a7b]">
+        <span>[SYS.INFO] Loading security audit trail logs...</span>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ marginBottom: '4px' }}>Security Audit Logs</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Comprehensive records of system configuration changes and user operations.</p>
-        </div>
-        <button className="btn btn-secondary" onClick={fetchLogs} disabled={loading} style={{ marginLeft: 'auto' }}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
+    <div className="container space-y-6">
+      <SectionHeader
+        code="SYS_AUDIT_LOGS"
+        title="Security & System Audit Logs"
+        subtitle="Cryptographic & configuration activity audit trail"
+        actions={
+          <RetroButton variant="secondary" icon={RotateCw} onClick={fetchLogs} disabled={loading}>
+            Refresh Audit Logs
+          </RetroButton>
+        }
+      />
 
       {error && (
-        <div 
-          style={{ 
-            padding: '16px', 
-            backgroundColor: 'var(--color-danger-glass)', 
-            color: 'var(--color-danger)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: '24px',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}
-        >
-          {error}
+        <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-center gap-2">
+          <span className="font-bold">[ERR]</span>
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Audit Logs Table */}
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+      {/* Summary Readout Metric */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <MetricReadout label="TOTAL AUDIT ENTRIES" value={logs.length} status="neutral" icon={FileText} />
+        <MetricReadout label="LAST AUDITED BY" value={logs[0]?.username || 'SYSTEM'} status="cyan" icon={Shield} />
+        <MetricReadout label="LATEST LOG ID" value={logs[0] ? `#${logs[0].id}` : 'N/A'} status="green" icon={RotateCw} />
+      </div>
+
+      <NocPanel code="AUDIT_STREAM" title="Audit Trail Execution Records" noPadding>
+        <div className="table-container border-0 rounded-none">
           <table className="custom-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Operator</th>
-                <th>Action</th>
-                <th>Target Object</th>
-                <th>Log Message</th>
-                <th>Timestamp</th>
+                <th>LOG ID</th>
+                <th>OPERATOR</th>
+                <th>ACTION TYPE</th>
+                <th>TARGET ENTITY</th>
+                <th>MESSAGE Telemetry</th>
+                <th>TIMESTAMP</th>
               </tr>
             </thead>
             <tbody>
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                    No audit logs available in database.
+                  <td colSpan="6" className="text-center py-8 text-[#768a7b]">
+                    No security audit logs recorded yet.
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
-                  <tr key={log.id}>
-                    <td>#{log.id}</td>
-                    <td style={{ fontWeight: '600' }}>{log.username}</td>
-                    <td>
-                      <span 
-                        className="badge" 
-                        style={{ 
-                          fontSize: '0.7rem',
-                          backgroundColor: log.actionType.includes('DELETE') || log.actionType.includes('FAIL') 
-                            ? 'var(--color-danger-glass)' 
-                            : log.actionType.includes('CREATE') || log.actionType.includes('REGISTER') || log.actionType.includes('FINISH')
-                              ? 'var(--color-success-glass)'
-                              : 'var(--color-info-glass)',
-                          color: log.actionType.includes('DELETE') || log.actionType.includes('FAIL') 
-                            ? 'var(--color-danger)' 
-                            : log.actionType.includes('CREATE') || log.actionType.includes('REGISTER') || log.actionType.includes('FINISH')
-                              ? 'var(--color-success)'
-                              : 'var(--color-info)'
-                        }}
-                      >
-                        {log.actionType}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                logs.map((log) => {
+                  const isDanger = log.actionType?.includes('DELETE') || log.actionType?.includes('FAIL') || log.actionType?.includes('REVOKE');
+                  const isSuccess = log.actionType?.includes('CREATE') || log.actionType?.includes('REGISTER') || log.actionType?.includes('FINISH') || log.actionType?.includes('LOGIN');
+                  
+                  return (
+                    <tr key={log.id}>
+                      <td className="font-mono text-[#00ff66]">#{log.id}</td>
+                      <td className="font-bold text-[#d5e3d8]">{log.username}</td>
+                      <td>
+                        <StatusIndicator 
+                          status={isDanger ? 'FAILED' : isSuccess ? 'SUCCESS' : 'RUNNING'} 
+                          text={log.actionType} 
+                          pulse={false}
+                        />
+                      </td>
+                      <td className="font-mono text-[#768a7b]">
                         {log.entityType} ({log.entityId ? `#${log.entityId}` : 'N/A'})
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.9rem' }}>{log.message}</td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {formatDateTime(log.createdAt)}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="text-xs text-[#d5e3d8] max-w-xs truncate">{log.message}</td>
+                      <td className="text-[11px] text-[#768a7b]">{formatDateTime(log.createdAt)}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </NocPanel>
     </div>
   );
 };

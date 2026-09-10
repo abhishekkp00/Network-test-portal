@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { UserPlus, Shield, Info } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator } from '../components/common';
 
 export const Register = () => {
   const [username, setUsername] = useState('');
@@ -67,161 +69,128 @@ export const Register = () => {
   };
 
   return (
-    <div className="container" style={{ display: 'flex', minHeight: '82vh', alignItems: 'center', justifyContent: 'space-between', gap: '60px', padding: '60px 20px', flexWrap: 'wrap' }}>
-      
-      {/* Left Column - Application Identity */}
-      <div style={{ flex: '1 1 480px', minWidth: '320px', paddingRight: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <svg 
-            width="44" 
-            height="44" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="var(--color-primary)" 
-            strokeWidth="2.5" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <polygon points="12 2 2 7 12 12 22 7 12 2" />
-            <polyline points="2 17 12 22 22 17" />
-            <polyline points="2 12 12 17 22 12" />
-          </svg>
-          <span style={{ fontSize: '1.65rem', fontWeight: '800', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.04em' }}>
-            Test Portal 2026
-          </span>
-        </div>
+    <div className="container flex items-center justify-center min-h-[85vh] py-8">
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
         
-        <h1 style={{ fontSize: '2.8rem', fontWeight: '800', lineHeight: '1.18', marginBottom: '22px', letterSpacing: '-0.04em', background: 'linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Distributed Network Performance Diagnostics.
-        </h1>
-        
-        <p style={{ fontSize: '1.02rem', color: 'var(--text-secondary)', lineHeight: '1.68', marginBottom: '34px', maxWidth: '520px' }}>
-          Orchestrate remote ICMP latency, path hops, and bandwidth throughput jobs across multiple subnets. Inspect live streaming terminals and set up Slack or Discord notifications for immediate outage response.
-        </p>
-      </div>
-
-      {/* Right Column - Translucent Glass Registration Block */}
-      <div 
-        className="glass-panel" 
-        style={{ 
-          flex: '0 1 450px', 
-          width: '100%',
-          minWidth: '320px',
-          padding: '40px',
-          background: 'rgba(12, 17, 34, 0.4)', 
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)'
-        }}
-      >
-        <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-          <h2 style={{ fontSize: '1.6rem', marginBottom: '8px', fontWeight: '700' }}>Create Account</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Register to join the monitoring dashboard.
-          </p>
-        </div>
-
-        {error && (
-          <div 
-            style={{ 
-              padding: '12px', 
-              backgroundColor: 'var(--color-danger-glass)', 
-              color: 'var(--color-danger)', 
-              borderRadius: 'var(--radius-sm)', 
-              fontSize: '0.85rem',
-              marginBottom: '20px',
-              border: '1px solid rgba(239, 68, 68, 0.2)'
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Username</label>
-            <input 
-              type="text" 
-              className="form-control"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. operator_john"
-              disabled={submitting}
-              autoComplete="username"
-              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
-            />
+        {/* Left Column - Identity */}
+        <div className="md:col-span-6 flex flex-col justify-center space-y-6">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-[#00ff66] bg-[#00ff66]/10 px-2 py-1 border border-[#00ff66]/30 rounded-[2px] tracking-widest uppercase">
+              // OPERATOR REGISTRATION
+            </span>
+            <StatusIndicator status="ACTIVE" text="INITIALIZE" />
           </div>
 
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Email Address</label>
-            <input 
-              type="email" 
-              className="form-control"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              disabled={submitting}
-              autoComplete="email"
-              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
-            />
-          </div>
+          <h1 className="font-mono text-3xl font-bold tracking-tight text-[#d5e3d8] uppercase border-l-2 border-[#00ff66] pl-4">
+            Provision Telemetry Access Credentials
+          </h1>
 
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Password</label>
-            <input 
-              type="password" 
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 6 chars (A-Z, a-z, 0-9)"
-              disabled={submitting}
-              autoComplete="new-password"
-              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
-            />
-          </div>
-
-          <div className="form-group" style={{ marginBottom: '24px' }}>
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Confirm Password</label>
-            <input 
-              type="password" 
-              className="form-control"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter password"
-              disabled={submitting}
-              autoComplete="new-password"
-              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
-            />
-          </div>
-
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '24px' }}>
-            ℹ️ New registrations default to the <strong>VIEWER</strong> role. Contact an Administrator to request elevation to <strong>OPERATOR</strong> or <strong>ADMIN</strong>.
+          <p className="font-mono text-xs text-[#768a7b] leading-relaxed">
+            Register new operator account to inspect live NOC diagnostic streams, view subnet topology telemetry, and submit scheduled network testing profiles.
           </p>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
-            disabled={submitting}
+          <div className="p-3 bg-[#101411] border border-[#27342a] rounded-[2px] font-mono text-xs text-[#768a7b] space-y-1">
+            <div className="text-[#00ff66] font-bold flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5" />
+              <span>ROLE PROVISIONING NOTICE</span>
+            </div>
+            <div>
+              New registrations default strictly to <strong className="text-[#d5e3d8]">[VIEWER]</strong> access level. Role upgrades to <strong className="text-[#d5e3d8]">[OPERATOR]</strong> or <strong className="text-[#d5e3d8]">[ADMIN]</strong> require approval.
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Registration Panel */}
+        <div className="md:col-span-6">
+          <NocPanel
+            code="SYS.REG // 0x02"
+            title="NEW OPERATOR REGISTRATION"
+            badge={<StatusIndicator status="PENDING" text="NEW RECORD" />}
           >
-            {submitting ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
-                <span>Creating account...</span>
+            {error && (
+              <div className="mb-4 p-2.5 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-start gap-2">
+                <span className="font-bold shrink-0">[ERR]</span>
+                <span>{error}</span>
               </div>
-            ) : (
-              'Create Account'
             )}
-          </button>
-        </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '600' }}>
-            Sign In
-          </Link>
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              <div className="form-group">
+                <label className="form-label">OPERATOR USERNAME</label>
+                <input 
+                  type="text" 
+                  className="form-control"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="operator_name"
+                  disabled={submitting}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">EMAIL ADDRESS</label>
+                <input 
+                  type="email" 
+                  className="form-control"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="operator@company.net"
+                  disabled={submitting}
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="form-group">
+                  <label className="form-label">PASSWORD</label>
+                  <input 
+                    type="password" 
+                    className="form-control"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min. 6 chars"
+                    disabled={submitting}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">CONFIRM PASSWORD</label>
+                  <input 
+                    type="password" 
+                    className="form-control"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    disabled={submitting}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              <RetroButton 
+                type="submit" 
+                variant="primary" 
+                fullWidth 
+                size="lg"
+                disabled={submitting}
+                icon={UserPlus}
+              >
+                {submitting ? 'REGISTERING ACCOUNT...' : 'PROVISION OPERATOR ACCOUNT'}
+              </RetroButton>
+            </form>
+
+            <div className="mt-4 pt-3 border-t border-[#27342a] text-center font-mono text-xs text-[#768a7b]">
+              Already Registered?{' '}
+              <Link to="/login" className="text-[#00ff66] hover:underline font-semibold">
+                Sign In To NOC
+              </Link>
+            </div>
+          </NocPanel>
         </div>
-      </div>
 
+      </div>
     </div>
   );
 };

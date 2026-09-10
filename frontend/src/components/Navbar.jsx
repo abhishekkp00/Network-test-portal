@@ -1,6 +1,8 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Terminal, Activity, Shield, Users, FileText, Radio, LogOut } from 'lucide-react';
+import { RetroButton } from './common/RetroButton';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -14,46 +16,62 @@ export const Navbar = () => {
   };
 
   return (
-    <header className="navbar">
-      <div className="nav-brand" onClick={() => navigate('/')}>
-        <svg 
-          width="24" 
-          height="24" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="var(--color-primary)" 
-          strokeWidth="2.5" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
-        >
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-          <polyline points="2 12 12 17 22 12" />
-        </svg>
-        <span>Test Portal 2026</span>
+    <header className="bg-[#101411] border-b border-[#27342a] px-4 py-2 flex items-center justify-between sticky top-0 z-50 font-mono text-xs select-none">
+      {/* Brand / NOC Terminal Header */}
+      <div 
+        className="flex items-center gap-2 cursor-pointer text-[#00ff66] hover:text-white transition-colors" 
+        onClick={() => navigate('/')}
+      >
+        <Terminal className="w-4 h-4 text-[#00ff66]" />
+        <span className="font-bold tracking-wider uppercase text-sm">SYS.NOC // PORTAL</span>
+        <span className="text-[10px] text-[#00ff66] bg-[#00ff66]/10 px-1 py-0.5 border border-[#00ff66]/30 rounded-[1px] hidden md:inline">
+          LIVE
+        </span>
       </div>
 
-      <nav className="nav-links">
+      {/* Nav Links */}
+      <nav className="flex items-center gap-1 sm:gap-2">
         <NavLink 
           to="/profiles" 
-          className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+          className={({ isActive }) => 
+            `px-2.5 py-1 rounded-[2px] uppercase text-[11px] font-semibold tracking-wider transition-all flex items-center gap-1.5 border ${
+              isActive 
+                ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40' 
+                : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+            }`
+          }
         >
-          Test Profiles
+          <Activity className="w-3.5 h-3.5" />
+          <span>Profiles</span>
         </NavLink>
         
         <NavLink 
           to="/jobs" 
-          className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+          className={({ isActive }) => 
+            `px-2.5 py-1 rounded-[2px] uppercase text-[11px] font-semibold tracking-wider transition-all flex items-center gap-1.5 border ${
+              isActive 
+                ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40' 
+                : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+            }`
+          }
         >
-          Test Jobs
+          <Terminal className="w-3.5 h-3.5" />
+          <span>Jobs</span>
         </NavLink>
 
         {['ADMIN', 'OPERATOR'].includes(user.role) && (
           <NavLink 
             to="/agents" 
-            className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+            className={({ isActive }) => 
+              `px-2.5 py-1 rounded-[2px] uppercase text-[11px] font-semibold tracking-wider transition-all flex items-center gap-1.5 border ${
+                isActive 
+                  ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40' 
+                  : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+              }`
+            }
           >
-            Subnet Agents
+            <Radio className="w-3.5 h-3.5" />
+            <span>Agents</span>
           </NavLink>
         )}
 
@@ -61,45 +79,61 @@ export const Navbar = () => {
           <>
             <NavLink 
               to="/users" 
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              className={({ isActive }) => 
+                `px-2.5 py-1 rounded-[2px] uppercase text-[11px] font-semibold tracking-wider transition-all flex items-center gap-1.5 border ${
+                  isActive 
+                    ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40' 
+                    : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+                }`
+              }
             >
-              User Management
+              <Users className="w-3.5 h-3.5" />
+              <span>Users</span>
             </NavLink>
             <NavLink 
               to="/audit-logs" 
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              className={({ isActive }) => 
+                `px-2.5 py-1 rounded-[2px] uppercase text-[11px] font-semibold tracking-wider transition-all flex items-center gap-1.5 border ${
+                  isActive 
+                    ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40' 
+                    : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+                }`
+              }
             >
-              Audit Logs
+              <FileText className="w-3.5 h-3.5" />
+              <span>Audit</span>
             </NavLink>
             <NavLink 
               to="/diagnostics" 
-              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              className={({ isActive }) => 
+                `px-2.5 py-1 rounded-[2px] uppercase text-[11px] font-semibold tracking-wider transition-all flex items-center gap-1.5 border ${
+                  isActive 
+                    ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40' 
+                    : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+                }`
+              }
             >
-              Diagnostics
+              <Shield className="w-3.5 h-3.5" />
+              <span>Diagnostics</span>
             </NavLink>
           </>
         )}
       </nav>
 
-      <div className="nav-user">
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>{user.username}</div>
-          <span 
-            className="badge" 
-            style={{ 
-              fontSize: '0.65rem', 
-              padding: '2px 6px',
-              backgroundColor: user.role === 'ADMIN' ? 'var(--color-danger-glass)' : 'var(--color-primary-glass)',
-              color: user.role === 'ADMIN' ? 'var(--color-danger)' : 'var(--color-primary)'
-            }}
-          >
-            {user.role}
-          </span>
+      {/* User Status / Logout */}
+      <div className="flex items-center gap-3 border-l border-[#27342a] pl-3">
+        <div className="text-right hidden sm:block">
+          <div className="text-[11px] font-bold text-[#d5e3d8]">{user.username}</div>
+          <div className="text-[9px] font-semibold text-[#00ff66] uppercase tracking-widest">
+            [{user.role}]
+          </div>
         </div>
-        <button className="btn btn-secondary" onClick={handleLogout} style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-          Logout
-        </button>
+        <RetroButton variant="ghost" size="sm" onClick={handleLogout} icon={LogOut}>
+          Exit
+        </RetroButton>
       </div>
     </header>
   );
 };
+
+export default Navbar;

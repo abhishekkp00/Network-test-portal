@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Terminal, Shield, Info, LogIn, ArrowRight, X } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader } from '../components/common';
 
 export const Login = () => {
   const [username, setUsername] = useState('');
@@ -37,225 +39,157 @@ export const Login = () => {
   };
 
   return (
-    <div className="container" style={{ display: 'flex', minHeight: '82vh', alignItems: 'center', justifyContent: 'space-between', gap: '60px', padding: '60px 20px', flexWrap: 'wrap' }}>
-      
-      {/* Left Column - Application Identity */}
-      <div style={{ flex: '1 1 480px', minWidth: '320px', paddingRight: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <svg 
-            width="44" 
-            height="44" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="var(--color-primary)" 
-            strokeWidth="2.5" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <polygon points="12 2 2 7 12 12 22 7 12 2" />
-            <polyline points="2 17 12 22 22 17" />
-            <polyline points="2 12 12 17 22 12" />
-          </svg>
-          <span style={{ fontSize: '1.65rem', fontWeight: '800', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.04em' }}>
-            Test Portal 2026
-          </span>
-        </div>
+    <div className="container flex items-center justify-center min-h-[85vh] py-8">
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
         
-        <h1 style={{ fontSize: '2.8rem', fontWeight: '800', lineHeight: '1.18', marginBottom: '22px', letterSpacing: '-0.04em', background: 'linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Distributed Network Performance Diagnostics.
-        </h1>
-        
-        <p style={{ fontSize: '1.02rem', color: 'var(--text-secondary)', lineHeight: '1.68', marginBottom: '34px', maxWidth: '520px' }}>
-          Orchestrate remote ICMP latency, path hops, and bandwidth throughput jobs across multiple subnets. Inspect live streaming terminals and set up Slack or Discord notifications for immediate outage response.
-        </p>
-        
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => setShowModal(true)}
-          style={{ padding: '12px 28px', fontSize: '0.92rem', borderRadius: 'var(--radius-sm)' }}
-        >
-          Know More
-        </button>
-      </div>
+        {/* Left Column - System Identity & Information */}
+        <div className="md:col-span-7 flex flex-col justify-center space-y-6">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-[#00ff66] bg-[#00ff66]/10 px-2 py-1 border border-[#00ff66]/30 rounded-[2px] tracking-widest uppercase">
+              // SYS.NOC.v2026
+            </span>
+            <StatusIndicator status="ONLINE" text="NOC ONLINE" />
+          </div>
 
-      {/* Right Column - Translucent Glass Login Block */}
-      <div 
-        className="glass-panel" 
-        style={{ 
-          flex: '0 1 420px', 
-          width: '100%',
-          minWidth: '320px',
-          padding: '40px',
-          background: 'rgba(12, 17, 34, 0.4)', 
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)'
-        }}
-      >
-        <div style={{ marginBottom: '32px', textAlign: 'left' }}>
-          <h2 style={{ fontSize: '1.6rem', marginBottom: '8px', fontWeight: '700' }}>Welcome Back</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Sign in to start orchestrating diagnostics.
+          <h1 className="font-mono text-3xl md:text-4xl font-bold tracking-tight text-[#d5e3d8] uppercase border-l-2 border-[#00ff66] pl-4">
+            Distributed Network Performance Diagnostics
+          </h1>
+
+          <p className="font-mono text-xs md:text-sm text-[#768a7b] leading-relaxed max-w-xl">
+            Orchestrate remote ICMP latency probes, path hop analysis, and throughput diagnostic jobs across multi-subnet infrastructure. Real-time telemetry via server-sent streams and alert deduplication.
           </p>
+
+          <div className="pt-2 flex items-center gap-4">
+            <RetroButton 
+              variant="secondary" 
+              icon={Info} 
+              onClick={() => setShowModal(true)}
+            >
+              System Specs & Info
+            </RetroButton>
+          </div>
         </div>
 
-        {error && (
-          <div 
-            style={{ 
-              padding: '12px', 
-              backgroundColor: 'var(--color-danger-glass)', 
-              color: 'var(--color-danger)', 
-              borderRadius: 'var(--radius-sm)', 
-              fontSize: '0.85rem',
-              marginBottom: '20px',
-              border: '1px solid rgba(239, 68, 68, 0.2)'
-            }}
+        {/* Right Column - NOC Authentication Terminal */}
+        <div className="md:col-span-5">
+          <NocPanel
+            code="AUTH // 0x01"
+            title="AUTHENTICATION TERMINAL"
+            badge={<StatusIndicator status="ACTIVE" text="SECURE" />}
           >
-            {error}
-          </div>
-        )}
+            <div className="mb-4 text-xs font-mono text-[#768a7b]">
+              Enter system operator credentials to access the terminal console.
+            </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Username</label>
-            <input 
-              type="text" 
-              className="form-control"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. admin"
-              disabled={submitting}
-              autoComplete="username"
-              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
-            />
-          </div>
-
-          <div className="form-group" style={{ marginBottom: '28px' }}>
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Password</label>
-            <input 
-              type="password" 
-              className="form-control"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              disabled={submitting}
-              autoComplete="current-password"
-              style={{ background: 'rgba(6, 9, 19, 0.65)' }}
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
-                <span>Signing in...</span>
+            {error && (
+              <div className="mb-4 p-2.5 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-start gap-2">
+                <span className="font-bold shrink-0">[ERR]</span>
+                <span>{error}</span>
               </div>
-            ) : (
-              'Sign In'
             )}
-          </button>
-        </form>
 
-        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: '600' }}>
-            Create Account
-          </Link>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="form-group">
+                <label className="form-label">OPERATOR USERNAME</label>
+                <input 
+                  type="text" 
+                  className="form-control"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="admin"
+                  disabled={submitting}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">OPERATOR PASSWORD</label>
+                <input 
+                  type="password" 
+                  className="form-control"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={submitting}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <RetroButton 
+                type="submit" 
+                variant="primary" 
+                fullWidth 
+                size="lg"
+                disabled={submitting}
+                icon={LogIn}
+              >
+                {submitting ? 'AUTHENTICATING...' : 'SIGN IN TO NOC'}
+              </RetroButton>
+            </form>
+
+            <div className="mt-4 pt-3 border-t border-[#27342a] text-center font-mono text-xs text-[#768a7b]">
+              New Operator?{' '}
+              <Link to="/register" className="text-[#00ff66] hover:underline font-semibold">
+                Register Credentials
+              </Link>
+            </div>
+          </NocPanel>
         </div>
       </div>
 
-      {/* Dynamic Know More Modal */}
+      {/* System Information Modal */}
       {showModal && (
         <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(4, 6, 12, 0.88)',
-            backdropFilter: 'blur(16px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
+          className="fixed inset-0 bg-[#0a0d0b]/90 z-50 flex items-center justify-center p-4"
           onClick={() => setShowModal(false)}
         >
           <div 
-            className="glass-panel" 
-            style={{ 
-              maxWidth: '680px', 
-              width: '100%', 
-              maxHeight: '85vh', 
-              overflowY: 'auto', 
-              position: 'relative',
-              background: '#0a0d16',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              padding: '40px',
-              animation: 'modalSlideIn 0.4s var(--ease-human)'
-            }}
+            className="w-full max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
-              onClick={() => setShowModal(false)}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                transition: 'color 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.color = '#fff'}
-              onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
+            <NocPanel
+              code="SYS.DOCS // 0x99"
+              title="System Specification & Architecture"
+              action={
+                <RetroButton variant="ghost" size="sm" onClick={() => setShowModal(false)} icon={X}>
+                  Close
+                </RetroButton>
+              }
             >
-              &times;
-            </button>
+              <div className="space-y-4 font-mono text-xs text-[#768a7b] leading-relaxed max-h-[70vh] overflow-y-auto pr-2">
+                <div>
+                  <h4 className="text-[#d5e3d8] font-bold text-sm mb-1 uppercase">// Architecture Purpose</h4>
+                  <p>
+                    Network diagnostic tools are typically fragmented CLI tools running locally on administrator machines. This portal consolidates ICMP latency probes, tracepaths, and throughput diagnostics into a production-grade distributed execution platform.
+                  </p>
+                </div>
 
-            <h2 style={{ fontSize: '1.8rem', marginBottom: '20px', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.03em' }}>
-              About Network Test Portal
-            </h2>
+                <div>
+                  <h4 className="text-[#d5e3d8] font-bold text-sm mb-1 uppercase">// Core Telemetry Features</h4>
+                  <ul className="list-disc list-inside space-y-1 text-[#d5e3d8]">
+                    <li><strong className="text-[#00ff66]">Atomic Job Claiming:</strong> Row-level PostgreSQL locks (SELECT FOR UPDATE SKIP LOCKED) ensure concurrency safety across polling agents.</li>
+                    <li><strong className="text-[#00ff66]">Live Diagnostic SSE:</strong> Stream binary outputs in real time via Server-Sent Events.</li>
+                    <li><strong className="text-[#00ff66]">Incident Lifecycle & Alerts:</strong> Track alert deduplication, state transitions, and automated resolution.</li>
+                    <li><strong className="text-[#00ff66]">HMAC Signed Agent Telemetry:</strong> Cryptographic token hashing and HMAC request signatures.</li>
+                  </ul>
+                </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: '1.62' }}>
-              <div>
-                <h4 style={{ color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>🤔 Why this App?</h4>
-                <p style={{ margin: 0 }}>
-                  Network diagnostic tools are typically fragmented, command-line interfaces running locally on a single administrator machine. This portal transforms CLI testing into a centralized orchestrator system, capable of scheduling and executing remote diagnostic jobs across distributed subnets and presenting the metrics visually in one dashboard.
-                </p>
+                <div>
+                  <h4 className="text-[#d5e3d8] font-bold text-sm mb-1 uppercase">// Technology Stack</h4>
+                  <p>
+                    Backend: Java 17, Spring Boot 3, Spring Security, PostgreSQL 15.<br/>
+                    Frontend: React 19, Vite, Tailwind CSS, Lucide React icons.<br/>
+                    Agents: Python 3 socket / subprocess workers.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h4 style={{ color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>🚀 What does it do?</h4>
-                <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <li><strong>Centralized Test Profiling:</strong> Manage targets and parameters dynamically for recurring diagnostic tests.</li>
-                  <li><strong>Interactive Live Streams:</strong> Probe systems on demand and read terminal outputs instantly via Server-Sent Events (SSE).</li>
-                  <li><strong>Automated Channel Alerting:</strong> Scan results against critical thresholds and dispatch Discord or Slack alerts during latency spikes or package drops.</li>
-                  <li><strong>Subnet Monitoring Agents:</strong> Deploy remote python-clients that auto-discover targets and report telemetry results back to the portal.</li>
-                </ul>
+              <div className="mt-4 pt-3 border-t border-[#27342a] text-right">
+                <RetroButton variant="primary" onClick={() => setShowModal(false)}>
+                  Acknowledge
+                </RetroButton>
               </div>
-
-              <div>
-                <h4 style={{ color: '#fff', marginBottom: '6px', fontSize: '1rem' }}>💻 Technology Stack</h4>
-                <p style={{ margin: 0 }}>
-                  Built with a modern web tech stack including a **Java 17 & Spring Boot** secure API backend, a **React & Vite** glassmorphic dashboard frontend, **PostgreSQL** for relational metadata persistence, and standard **Python 3** subprocess binaries for local executing workers.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '30px', textAlign: 'right' }}>
-              <button className="btn btn-primary" onClick={() => setShowModal(false)}>
-                Got It
-              </button>
-            </div>
+            </NocPanel>
           </div>
         </div>
       )}

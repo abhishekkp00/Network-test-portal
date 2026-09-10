@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
+import { Shield, RotateCw, Play, Square, Cpu, HardDrive, Server, Terminal } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 export const Diagnostics = () => {
   const [report, setReport] = useState(null);
@@ -90,22 +92,11 @@ export const Diagnostics = () => {
 
   if (loading && !report) {
     return (
-      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <div className="spinner"></div>
-        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)' }}>Loading system diagnostics...</span>
+      <div className="container flex justify-center items-center h-[60vh] font-mono text-xs text-[#768a7b]">
+        <span>[SYS.INFO] Running system diagnostic inspection...</span>
       </div>
     );
   }
-
-  const getStatusBadgeClass = (status) => {
-    return status === 'OK' || status === 'SUCCESS' ? 'badge-success' : 'badge-danger';
-  };
-
-  const getCardBorderStyle = (status) => {
-    return status === 'OK' 
-      ? '1px solid rgba(16, 185, 129, 0.2)' 
-      : '1px solid rgba(239, 68, 68, 0.2)';
-  };
 
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return '-';
@@ -114,323 +105,211 @@ export const Diagnostics = () => {
   };
 
   return (
-    <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ marginBottom: '4px' }}>System Diagnostics</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>Verify active backend processes, Python workers, and system utility binaries.</p>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-          <button className="btn btn-secondary" onClick={fetchDiagnostics} disabled={loading}>
-            {loading ? 'Testing...' : 'Retest System'}
-          </button>
-        </div>
-      </div>
+    <div className="container space-y-6">
+      <SectionHeader
+        code="SYS_DIAGNOSTICS"
+        title="System Diagnostic Report & SSE Console"
+        subtitle="Verify process binaries, worker scripts, and host resource telemetry"
+        actions={
+          <RetroButton variant="secondary" icon={RotateCw} onClick={fetchDiagnostics} disabled={loading}>
+            Retest System
+          </RetroButton>
+        }
+      />
 
       {error && (
-        <div 
-          style={{ 
-            padding: '16px', 
-            backgroundColor: 'var(--color-danger-glass)', 
-            color: 'var(--color-danger)', 
-            borderRadius: 'var(--radius-md)', 
-            marginBottom: '24px',
-            border: '1px solid rgba(239, 68, 68, 0.2)'
-          }}
-        >
-          {error}
+        <div className="p-3 bg-[#ff3333]/15 border border-[#ff3333]/40 rounded-[2px] font-mono text-xs text-[#ff3333] flex items-center gap-2">
+          <span className="font-bold">[ERR]</span>
+          <span>{error}</span>
         </div>
       )}
 
       {report && (
         <>
           {/* Status Banner */}
-          <div 
-            className="glass-panel" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              marginBottom: '30px', 
-              padding: '24px',
-              border: getCardBorderStyle(report.overallStatus),
-              background: report.overallStatus === 'SUCCESS' ? 'var(--color-success-glass)' : 'var(--color-danger-glass)'
-            }}
+          <NocPanel
+            code="SYS.ORCHESTRATOR"
+            title="System Orchestrator Status"
+            status={report.overallStatus === 'SUCCESS' ? 'success' : 'danger'}
+            badge={
+              <StatusIndicator 
+                status={report.overallStatus === 'SUCCESS' ? 'HEALTHY' : 'DEGRADED'} 
+                text={report.overallStatus === 'SUCCESS' ? 'ONLINE' : 'ATTENTION'} 
+              />
+            }
           >
-            <div>
-              <h3 style={{ margin: '0 0 4px 0' }}>
-                System Orchestrator: {report.overallStatus === 'SUCCESS' ? 'HEALTHY' : 'DEGRADED'}
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Last Checked: {formatDateTime(report.timestamp)}
-              </p>
+            <div className="font-mono text-xs text-[#768a7b]">
+              Diagnostic Timestamp: <span className="text-[#d5e3d8] font-bold">{formatDateTime(report.timestamp)}</span>
             </div>
-            <span 
-              className={`badge ${getStatusBadgeClass(report.overallStatus)}`}
-              style={{ fontSize: '1rem', padding: '8px 16px' }}
-            >
-              {report.overallStatus === 'SUCCESS' ? 'ONLINE' : 'ATTENTION'}
-            </span>
-          </div>
+          </NocPanel>
 
           {/* Host Resource Telemetry Gauges */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-            <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 13, 22, 0.45)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Host CPU Load</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{report.cpuUsagePct}%</span>
-              </div>
-              <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${report.cpuUsagePct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-primary) 0%, var(--color-info) 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Real-time processing core utilization.</span>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 13, 22, 0.45)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Host Memory (RAM)</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--color-warning)' }}>{report.memoryUsagePct}%</span>
-              </div>
-              <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${report.memoryUsagePct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-warning) 0%, #f97316 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Memory allocated on virtualized host.</span>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '20px', background: 'rgba(10, 13, 22, 0.45)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Host Disk Space</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--color-success)' }}>{report.diskUsagePct}%</span>
-              </div>
-              <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div style={{ width: `${report.diskUsagePct}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-success) 0%, #22c55e 100%)', borderRadius: '3px', transition: 'width 0.5s ease-out' }}></div>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Active partition storage capacity.</span>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <MetricReadout
+              label="HOST CPU LOAD"
+              value={report.cpuUsagePct}
+              unit="%"
+              progress={report.cpuUsagePct}
+              status={report.cpuUsagePct > 80 ? 'amber' : 'green'}
+              icon={Cpu}
+              subtext="Real-time core processing load"
+            />
+            <MetricReadout
+              label="HOST MEMORY (RAM)"
+              value={report.memoryUsagePct}
+              unit="%"
+              progress={report.memoryUsagePct}
+              status={report.memoryUsagePct > 85 ? 'red' : 'amber'}
+              icon={Server}
+              subtext="Allocated RAM capacity"
+            />
+            <MetricReadout
+              label="HOST DISK SPACE"
+              value={report.diskUsagePct}
+              unit="%"
+              progress={report.diskUsagePct}
+              status={report.diskUsagePct > 90 ? 'red' : 'green'}
+              icon={HardDrive}
+              subtext="Active partition storage"
+            />
           </div>
 
-          {/* Diagnostic Details Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-            
-            {/* Python Executable Card */}
-            <div className="glass-panel" style={{ border: getCardBorderStyle(report.pythonStatus) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>Python Executable</h3>
-                <span className={`badge ${getStatusBadgeClass(report.pythonStatus)}`}>
-                  {report.pythonStatus}
-                </span>
+          {/* Diagnostic Components Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <NocPanel
+              code="SYS.PYTHON"
+              title="Python Executable"
+              badge={<StatusIndicator status={report.pythonStatus === 'OK' ? 'HEALTHY' : 'FAILED'} text={report.pythonStatus} />}
+            >
+              <div className="font-mono text-xs space-y-1.5 text-[#768a7b]">
+                <div>Command Target: <code className="text-[#00bfff]">python3</code></div>
+                <div className="text-[10px] text-[#d5e3d8] truncate">{report.pythonDetails}</div>
               </div>
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Configured Command:</span>
-                  <code style={{ marginLeft: '8px', color: 'var(--color-info)' }}>python3</code>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Version Details:</span>
-                  <p style={{ margin: '4px 0 0 0', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
-                    {report.pythonDetails}
-                  </p>
-                </div>
-              </div>
-            </div>
+            </NocPanel>
 
-            {/* Ping Script Card */}
-            <div className="glass-panel" style={{ border: getCardBorderStyle(report.pingScriptStatus) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>Ping Worker Script</h3>
-                <span className={`badge ${getStatusBadgeClass(report.pingScriptStatus)}`}>
-                  {report.pingScriptStatus}
-                </span>
+            <NocPanel
+              code="SCRIPT.PING"
+              title="Ping Worker Script"
+              badge={<StatusIndicator status={report.pingScriptStatus === 'OK' ? 'HEALTHY' : 'FAILED'} text={report.pingScriptStatus} />}
+            >
+              <div className="font-mono text-xs space-y-1.5 text-[#768a7b]">
+                <div>Target Path: <code className="text-[#00bfff]">ping_worker.py</code></div>
+                <div className="text-[10px] text-[#d5e3d8] truncate">{report.pingScriptDetails}</div>
               </div>
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Relative Target:</span>
-                  <code style={{ marginLeft: '8px', color: 'var(--color-info)' }}>../python-workers/ping_worker.py</code>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Script Integrity:</span>
-                  <p style={{ margin: '4px 0 0 0', fontFamily: 'monospace', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
-                    {report.pingScriptDetails}
-                  </p>
-                </div>
-              </div>
-            </div>
+            </NocPanel>
 
-            {/* iPerf Script Card */}
-            <div className="glass-panel" style={{ border: getCardBorderStyle(report.iperfScriptStatus) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>iPerf Worker Script</h3>
-                <span className={`badge ${getStatusBadgeClass(report.iperfScriptStatus)}`}>
-                  {report.iperfScriptStatus}
-                </span>
+            <NocPanel
+              code="SCRIPT.IPERF"
+              title="iPerf Worker Script"
+              badge={<StatusIndicator status={report.iperfScriptStatus === 'OK' ? 'HEALTHY' : 'FAILED'} text={report.iperfScriptStatus} />}
+            >
+              <div className="font-mono text-xs space-y-1.5 text-[#768a7b]">
+                <div>Target Path: <code className="text-[#00bfff]">iperf_worker.py</code></div>
+                <div className="text-[10px] text-[#d5e3d8] truncate">{report.iperfScriptDetails}</div>
               </div>
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Relative Target:</span>
-                  <code style={{ marginLeft: '8px', color: 'var(--color-info)' }}>../python-workers/iperf_worker.py</code>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Script Integrity:</span>
-                  <p style={{ margin: '4px 0 0 0', fontFamily: 'monospace', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
-                    {report.iperfScriptDetails}
-                  </p>
-                </div>
-              </div>
-            </div>
+            </NocPanel>
 
-            {/* Ping Binary Card */}
-            <div className="glass-panel" style={{ border: getCardBorderStyle(report.pingBinaryStatus) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>System Ping Binary</h3>
-                <span className={`badge ${getStatusBadgeClass(report.pingBinaryStatus)}`}>
-                  {report.pingBinaryStatus}
-                </span>
+            <NocPanel
+              code="BIN.PING"
+              title="System Ping Binary"
+              badge={<StatusIndicator status={report.pingBinaryStatus === 'OK' ? 'HEALTHY' : 'FAILED'} text={report.pingBinaryStatus} />}
+            >
+              <div className="font-mono text-xs space-y-1.5 text-[#768a7b]">
+                <div>Binary Target: <code className="text-[#00bfff]">/bin/ping</code></div>
+                <div className="text-[10px] text-[#d5e3d8] truncate">{report.pingBinaryDetails}</div>
               </div>
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Command Target:</span>
-                  <code style={{ marginLeft: '8px', color: 'var(--color-info)' }}>ping</code>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Execution Diagnostics:</span>
-                  <p style={{ margin: '4px 0 0 0', color: 'var(--text-primary)' }}>
-                    {report.pingBinaryDetails}
-                  </p>
-                </div>
-              </div>
-            </div>
+            </NocPanel>
 
-            {/* iPerf3 Binary Card */}
-            <div className="glass-panel" style={{ border: getCardBorderStyle(report.iperfBinaryStatus) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>System iPerf3 Binary</h3>
-                <span className={`badge ${getStatusBadgeClass(report.iperfBinaryStatus)}`}>
-                  {report.iperfBinaryStatus}
-                </span>
+            <NocPanel
+              code="BIN.IPERF3"
+              title="System iPerf3 Binary"
+              badge={<StatusIndicator status={report.iperfBinaryStatus === 'OK' ? 'HEALTHY' : 'FAILED'} text={report.iperfBinaryStatus} />}
+            >
+              <div className="font-mono text-xs space-y-1.5 text-[#768a7b]">
+                <div>Binary Target: <code className="text-[#00bfff]">/usr/bin/iperf3</code></div>
+                <div className="text-[10px] text-[#d5e3d8] truncate">{report.iperfBinaryDetails}</div>
               </div>
-              <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Command Target:</span>
-                  <code style={{ marginLeft: '8px', color: 'var(--color-info)' }}>iperf3</code>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Execution Diagnostics:</span>
-                  <p style={{ margin: '4px 0 0 0', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
-                    {report.iperfBinaryDetails}
-                  </p>
-                </div>
-              </div>
-            </div>
-
+            </NocPanel>
           </div>
 
-          {/* INTERACTIVE LIVE TERMINAL SECTION */}
-          <div className="glass-panel" style={{ marginTop: '35px', padding: '30px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <h2 style={{ margin: '0 0 6px 0', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-info) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.6rem' }}>
-                Interactive Live Console
-              </h2>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Execute live network probes directly from the core server sub-interfaces. Streams stdout output line-by-line using Server-Sent Events (SSE).
+          {/* INTERACTIVE LIVE TERMINAL CONSOLE */}
+          <NocPanel
+            code="LIVE_STREAM // SSE"
+            title="Interactive Live Telemetry Console"
+            action={
+              terminalLines.length > 0 && !isRunning ? (
+                <RetroButton variant="ghost" size="sm" onClick={() => setTerminalLines([])}>
+                  Clear Terminal
+                </RetroButton>
+              ) : null
+            }
+          >
+            <div className="space-y-4 font-mono text-xs">
+              <p className="text-[#768a7b] text-[11px]">
+                Execute live network probes directly from the portal server. Telemetry stdout is streamed in real time via Server-Sent Events (SSE).
               </p>
-            </div>
 
-            {/* Form Inputs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px', alignItems: 'end' }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Destination Host / IP</label>
-                <input 
-                  type="text" 
-                  className="form-control"
-                  value={liveHost}
-                  onChange={(e) => setLiveHost(e.target.value)}
-                  placeholder="e.g. 8.8.8.8"
-                  disabled={isRunning}
-                  style={{ background: 'rgba(10, 13, 22, 0.8)', borderColor: 'var(--border-glass)' }}
-                />
-              </div>
+              {/* Form Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                <div className="form-group mb-0">
+                  <label className="form-label">Destination Host / IP</label>
+                  <input 
+                    type="text" 
+                    className="form-control"
+                    value={liveHost}
+                    onChange={(e) => setLiveHost(e.target.value)}
+                    placeholder="8.8.8.8"
+                    disabled={isRunning}
+                  />
+                </div>
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Protocol / Tool</label>
-                <select
-                  className="form-control"
-                  value={liveProtocol}
-                  onChange={(e) => setLiveProtocol(e.target.value)}
-                  disabled={isRunning}
-                  style={{ background: 'rgba(10, 13, 22, 0.8)', color: 'var(--text-primary)', borderColor: 'var(--border-glass)' }}
-                >
-                  <option value="PING">PING (ICMP Latency check)</option>
-                  <option value="TRACEPATH">TRACEPATH (Network path routing)</option>
-                </select>
-              </div>
-
-              {liveProtocol === 'PING' && (
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Packet Count</label>
+                <div className="form-group mb-0">
+                  <label className="form-label">Protocol / Tool</label>
                   <select
                     className="form-control"
-                    value={liveCount}
-                    onChange={(e) => setLiveCount(parseInt(e.target.value))}
+                    value={liveProtocol}
+                    onChange={(e) => setLiveProtocol(e.target.value)}
                     disabled={isRunning}
-                    style={{ background: 'rgba(10, 13, 22, 0.8)', color: 'var(--text-primary)', borderColor: 'var(--border-glass)' }}
                   >
-                    <option value="3">3 Packets</option>
-                    <option value="5">5 Packets</option>
-                    <option value="10">10 Packets</option>
-                    <option value="15">15 Packets</option>
+                    <option value="PING">PING (ICMP Latency check)</option>
+                    <option value="TRACEPATH">TRACEPATH (Network path routing)</option>
                   </select>
                 </div>
-              )}
 
-              <div>
-                {isRunning ? (
-                  <button className="btn btn-danger" onClick={stopLiveTest} style={{ width: '100%', padding: '10px' }}>
-                    Stop Execution
-                  </button>
-                ) : (
-                  <button className="btn btn-primary" onClick={startLiveTest} style={{ width: '100%', padding: '10px' }}>
-                    Start Live Test
-                  </button>
-                )}
-              </div>
-            </div>
+                {liveProtocol === 'PING' ? (
+                  <div className="form-group mb-0">
+                    <label className="form-label">Packet Count</label>
+                    <select
+                      className="form-control"
+                      value={liveCount}
+                      onChange={(e) => setLiveCount(parseInt(e.target.value))}
+                      disabled={isRunning}
+                    >
+                      <option value="3">3 Packets</option>
+                      <option value="5">5 Packets</option>
+                      <option value="10">10 Packets</option>
+                      <option value="15">15 Packets</option>
+                    </select>
+                  </div>
+                ) : <div />}
 
-            {/* Glowing Live Terminal */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {isRunning && <span className="spinner" style={{ width: '10px', height: '10px', borderWidth: '1.5px' }}></span>}
-                  Live Console Stdout
-                </span>
-                {terminalLines.length > 0 && (
-                  <button 
-                    className="btn btn-secondary" 
-                    onClick={() => setTerminalLines([])}
-                    style={{ padding: '2px 8px', fontSize: '0.7rem' }}
-                    disabled={isRunning}
-                  >
-                    Clear Console
-                  </button>
-                )}
+                <div>
+                  {isRunning ? (
+                    <RetroButton variant="danger" fullWidth icon={Square} onClick={stopLiveTest}>
+                      Stop Stream
+                    </RetroButton>
+                  ) : (
+                    <RetroButton variant="primary" fullWidth icon={Play} onClick={startLiveTest}>
+                      Start Live Test
+                    </RetroButton>
+                  )}
+                </div>
               </div>
-              <div 
-                style={{ 
-                  padding: '18px', 
-                  backgroundColor: '#030508', 
-                  border: '1px solid rgba(34, 197, 94, 0.25)', 
-                  borderRadius: 'var(--radius-sm)', 
-                  fontFamily: 'var(--font-mono)', 
-                  fontSize: '0.8rem', 
-                  color: '#4ade80', 
-                  minHeight: '260px',
-                  maxHeight: '400px',
-                  overflowY: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.8)'
-                }}
-              >
+
+              {/* Live CRT Terminal Monitor */}
+              <div className="p-3 bg-[#0a0d0b] border border-[#00ff66]/30 rounded-[2px] min-h-60 max-h-96 overflow-y-auto text-[#00ff66] text-[11px] leading-relaxed font-mono whitespace-pre-wrap">
                 {terminalLines.length === 0 ? (
-                  <span style={{ color: '#4b5563' }}>Console inactive. Select a target and click "Start Live Test" to watch real-time stream.</span>
+                  <span className="text-[#4e5f52] italic">// Live terminal ready. Specify target host and start stream.</span>
                 ) : (
                   terminalLines.map((line, idx) => (
                     <div key={idx}>{line}</div>
@@ -439,7 +318,7 @@ export const Diagnostics = () => {
                 <div ref={terminalEndRef} />
               </div>
             </div>
-          </div>
+          </NocPanel>
         </>
       )}
     </div>
