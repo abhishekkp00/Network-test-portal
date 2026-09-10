@@ -76,7 +76,7 @@ export const Agents = () => {
     }));
   };
 
-  const getStatusBadge = (lastSeenAt) => {
+  const getStatusBadge = (lastSeenAt, status) => {
     if (!lastSeenAt) {
       return (
         <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}>
@@ -85,13 +85,16 @@ export const Agents = () => {
       );
     }
 
-    const lastSeenDate = new Date(lastSeenAt);
-    const diffSeconds = (new Date() - lastSeenDate) / 1000;
-
-    if (diffSeconds < 25) {
+    if (status === 'ONLINE') {
       return (
         <span className="badge" style={{ backgroundColor: 'var(--color-success-glass)', color: 'var(--color-success)' }}>
           ● Online
+        </span>
+      );
+    } else if (status === 'DEGRADED') {
+      return (
+        <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+          ● Degraded
         </span>
       );
     } else {
@@ -197,9 +200,10 @@ export const Agents = () => {
               minWidth: '280px' 
             }}>
               {agents.map((agent) => {
-                const isOnline = agent.lastSeenAt && ((new Date() - new Date(agent.lastSeenAt)) / 1000) < 25;
-                const statusColor = isOnline ? 'var(--color-success)' : 'var(--color-danger)';
-                const statusLabel = isOnline ? 'Online' : 'Offline';
+                const isOnline = agent.status === 'ONLINE';
+                const isDegraded = agent.status === 'DEGRADED';
+                const statusColor = isOnline ? 'var(--color-success)' : isDegraded ? '#f59e0b' : 'var(--color-danger)';
+                const statusLabel = agent.status ? agent.status.charAt(0) + agent.status.slice(1).toLowerCase() : (isOnline ? 'Online' : 'Offline');
                 return (
                   <div key={agent.id} style={{ 
                     display: 'flex', 
@@ -317,7 +321,7 @@ export const Agents = () => {
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{agent.description}</div>
                       </td>
                       <td style={{ padding: '12px 8px' }}>
-                        {getStatusBadge(agent.lastSeenAt)}
+                        {getStatusBadge(agent.lastSeenAt, agent.status)}
                       </td>
                       <td style={{ padding: '12px 8px', fontFamily: 'monospace', fontSize: '0.8rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

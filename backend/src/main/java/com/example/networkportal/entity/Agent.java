@@ -24,8 +24,8 @@ public class Agent {
 
     private String description;
 
-    @Column(nullable = false, unique = true)
-    private String token;
+    @Column(name = "token_hash", nullable = false, unique = true)
+    private String tokenHash;
 
     @Column(name = "last_seen_at")
     private LocalDateTime lastSeenAt;

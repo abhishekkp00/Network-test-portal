@@ -90,6 +90,7 @@ export const Jobs = () => {
     switch (status) {
       case 'PENDING': return 'badge-pending';
       case 'RUNNING': return 'badge-running';
+      case 'STALE': return 'badge-warning';
       case 'SUCCESS': return 'badge-success';
       case 'FAILED': return 'badge-failed';
       case 'TIMEOUT': return 'badge-timeout';
@@ -170,6 +171,11 @@ export const Jobs = () => {
                       <span className={`badge ${getStatusBadgeClass(j.status)}`}>
                         {j.status}
                       </span>
+                      {j.attemptNumber > 0 && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Attempt {j.attemptNumber}/{j.maxAttempts || 3}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <code style={{ fontSize: '0.85rem' }}>
