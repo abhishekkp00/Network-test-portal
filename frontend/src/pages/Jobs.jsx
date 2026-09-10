@@ -618,15 +618,15 @@ export const Jobs = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#768a7b] block uppercase">// AGENT</span>
-                    <span className="font-bold text-[#d5e3d8] truncate block">
-                      {selectedJob.agentName ? selectedJob.agentName : (selectedJob.requestedByUsername || 'Core System')}
-                    </span>
-                  </div>
-                  <div>
                     <span className="text-[10px] text-[#768a7b] block uppercase">// PROTOCOL</span>
                     <span className="font-bold text-[#00ff66]">
                       {(selectedJob.effectiveProtocol || selectedJob.protocolOverride || 'PING').toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#768a7b] block uppercase">// AGENT</span>
+                    <span className="font-bold text-[#d5e3d8] truncate block">
+                      {selectedJob.agentName ? selectedJob.agentName : (selectedJob.requestedByUsername || 'Core System')}
                     </span>
                   </div>
                   <div>
@@ -640,11 +640,11 @@ export const Jobs = () => {
                     <StatusIndicator status={selectedJob.status} variant="dot" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#768a7b] block uppercase">// STARTED</span>
+                    <span className="text-[10px] text-[#768a7b] block uppercase">// START TIME</span>
                     <span className="text-[#d5e3d8]">{formatDateTime(selectedJob.startedAt)}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[#768a7b] block uppercase">// FINISHED</span>
+                    <span className="text-[10px] text-[#768a7b] block uppercase">// END TIME</span>
                     <span className="text-[#d5e3d8]">{formatDateTime(selectedJob.finishedAt)}</span>
                   </div>
                 </div>
