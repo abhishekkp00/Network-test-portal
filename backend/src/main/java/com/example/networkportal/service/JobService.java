@@ -251,6 +251,7 @@ public class JobService {
                     jobId, finalStatus, job.getAttemptNumber() + 1, job.getMaxAttempts(), nextRetryAt);
 
             job.setNextRetryAt(nextRetryAt);
+            job.setExecutionLeaseId(null);
             validateAndTransitionStatus(job, JobStatus.PENDING);
             jobRepository.save(job);
             return;
@@ -302,9 +303,10 @@ public class JobService {
                 long backoffSeconds = calculateExponentialBackoff(job.getAttemptNumber());
                 LocalDateTime nextRetryAt = LocalDateTime.now().plusSeconds(backoffSeconds);
 
-                job.setNextRetryAt(nextRetryAt);
-                validateAndTransitionStatus(job, JobStatus.PENDING);
-                jobRepository.save(job);
+            job.setNextRetryAt(nextRetryAt);
+            job.setExecutionLeaseId(null);
+            validateAndTransitionStatus(job, JobStatus.PENDING);
+            jobRepository.save(job);
 
                 log.info("Stale Job #{} requeued for retry (attempt {}/{} scheduled at {})",
                         job.getId(), job.getAttemptNumber() + 1, job.getMaxAttempts(), nextRetryAt);

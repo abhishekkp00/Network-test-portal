@@ -255,4 +255,38 @@ class ExecutionLeaseProtectionTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(invalidLeaseResult)))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @DisplayName("Lease Protection Test: Stale Agent Submit while Job is in PENDING Status is Rejected")
+    void testStaleAgentSubmitWhileRequeuedPending_Rejected() throws Exception {
+        String adminToken = getAdminToken();
+        AgentResponse agent = registerAgent(adminToken, "Agent-StalePending");
+        ProfileResponse profile = createProfile(adminToken, "Profile-StalePendingTest");
+        JobResponse job = createJob(adminToken, profile.getId(), agent.getId());
+
+        // Agent polls & claims job
+        String taskStr = mockMvc.perform(get("/api/v1/agents/poll")
+                        .header("X-Agent-Token", agent.getToken()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        AgentTaskDto task = objectMapper.readValue(taskStr, AgentTaskDto.class);
+        String oldLeaseId = task.getExecutionLeaseId();
+
+        // Simulate Stale Recovery -> Job returns to PENDING status and lease is cleared
+        jobService.processStaleJobs(LocalDateTime.now().plusHours(1));
+
+        // Stale Agent attempts to submit result while job is in PENDING status
+        WorkerOutputDto staleResult = WorkerOutputDto.builder()
+                .executionLeaseId(oldLeaseId)
+                .attemptNumber(1)
+                .status("SUCCESS")
+                .rttAvgMs(15.0)
+                .build();
+
+        mockMvc.perform(post("/api/v1/agents/results/" + job.getId())
+                        .header("X-Agent-Token", agent.getToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(staleResult)))
+                .andExpect(status().isBadRequest());
+    }
 }

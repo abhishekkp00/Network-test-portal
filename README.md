@@ -49,8 +49,8 @@ graph TD
 
 ## 🛠️ Technology Stack
 
-* **Backend**: Spring Boot 3, Java 17, Spring Security, JWT, JPA/Hibernate (PESSIMISTIC_WRITE), Spring Validation
-* **Frontend**: React 18, Vite, Recharts, TailwindCSS, Lucide Icons
+* **Backend**: Spring Boot 3.3, Java 17, Spring Security, JWT, JPA/Hibernate (PESSIMISTIC_WRITE), Spring Validation
+* **Frontend**: React 19, Vite 5, Recharts, TailwindCSS, Lucide Icons
 * **Database**: PostgreSQL 15
 * **Edge Runners**: Python 3.10+, socket, subprocess, requests, hmac, hashlib
 

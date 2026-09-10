@@ -85,17 +85,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow explicit origins from properties as well as patterns for local dev/Docker ports (8080, 8082, 8083, 5173, etc.)
-        configuration.setAllowedOriginPatterns(List.of(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "http://localhost",
-            "http://127.0.0.1"
-        ));
+        List<String> origins = (allowedOrigins != null && !allowedOrigins.isEmpty())
+                ? allowedOrigins
+                : List.of("http://localhost:5173", "http://localhost", "http://127.0.0.1");
+
+        boolean hasWildcards = origins.stream().anyMatch(o -> o.contains("*"));
+        if (hasWildcards) {
+            configuration.setAllowedOriginPatterns(origins);
+        } else {
+            configuration.setAllowedOrigins(origins);
+        }
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "X-Agent-Token"));
+        configuration.setAllowedHeaders(List.of(
+            "Authorization", "Content-Type", "X-Requested-With",
+            "X-Agent-Token", "X-Agent-Timestamp", "X-Agent-Nonce", "X-Agent-Signature", "X-Agent-Id"
+        ));
         configuration.setExposedHeaders(List.of("Authorization"));
-        // Allow cookies/credentials if needed by future SSE or cookie-based auth
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
