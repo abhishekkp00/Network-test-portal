@@ -90,8 +90,9 @@ class AgentJobLifecycleIntegrationTest extends BaseIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         AgentTaskDto taskDto = objectMapper.readValue(polledTaskStr, AgentTaskDto.class);
 
-        // 5. Agent Submits Worker Output Result
+        // 5. Agent Submits Worker Output Result with valid executionLeaseId
         WorkerOutputDto workerResult = WorkerOutputDto.builder()
+                .executionLeaseId(taskDto.getExecutionLeaseId())
                 .status("SUCCESS")
                 .rttAvgMs(15.4)
                 .rttMinMs(12.1)

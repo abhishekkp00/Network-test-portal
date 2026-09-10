@@ -192,6 +192,8 @@ public class AgentService {
 
         return AgentTaskDto.builder()
                 .jobId(job.getId())
+                .executionLeaseId(job.getExecutionLeaseId())
+                .attemptNumber(job.getAttemptNumber())
                 .protocol(job.getEffectiveProtocol().name())
                 .host(job.getEffectiveHost())
                 .server(job.getEffectiveServer())
@@ -222,9 +224,28 @@ public class AgentService {
         TestJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
 
-        // Strict authorization check: agent can only submit results for its assigned job
+        // 1. Strict authorization check: agent can only submit results for its assigned job
         if (job.getAgent() == null || !job.getAgent().getId().equals(agent.getId())) {
             throw new UnauthorizedException("Agent ID " + agent.getId() + " is not authorized to submit results for Job #" + jobId);
+        }
+
+        // 2. Validate job status is currently RUNNING
+        if (job.getStatus() != JobStatus.RUNNING) {
+            throw new BadRequestException("Job #" + jobId + " is not in RUNNING status (current status: " + job.getStatus() + ")");
+        }
+
+        // 3. Validate attempt number if specified
+        if (output.getAttemptNumber() != null && !output.getAttemptNumber().equals(job.getAttemptNumber())) {
+            throw new UnauthorizedException("Attempt number mismatch for Job #" + jobId + ": expected " + job.getAttemptNumber() + ", got " + output.getAttemptNumber());
+        }
+
+        // 4. Strict execution lease validation against stale workers
+        if (output.getExecutionLeaseId() == null || output.getExecutionLeaseId().trim().isEmpty()) {
+            throw new BadRequestException("Missing required executionLeaseId for Job #" + jobId);
+        }
+
+        if (job.getExecutionLeaseId() == null || !job.getExecutionLeaseId().equals(output.getExecutionLeaseId().trim())) {
+            throw new UnauthorizedException("Stale or invalid executionLeaseId for Job #" + jobId + ". Submitted: " + output.getExecutionLeaseId() + ", Active: " + job.getExecutionLeaseId());
         }
 
         JobStatus finalStatus = JobStatus.SUCCESS;
@@ -235,7 +256,7 @@ public class AgentService {
         }
 
         jobService.saveJobResult(jobId, finalStatus, output);
-        log.info("Agent '{}' successfully submitted result for Job #{}", agent.getName(), jobId);
+        log.info("Agent '{}' successfully submitted result for Job #{} (Lease: {})", agent.getName(), jobId, output.getExecutionLeaseId());
     }
 
     @Transactional

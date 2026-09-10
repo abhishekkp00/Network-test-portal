@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class WorkerOutputDto {
+    private String executionLeaseId;
+    private Integer attemptNumber;
     private String tool;
     private String status;
     private Double packetLossPct;

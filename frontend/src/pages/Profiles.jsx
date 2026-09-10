@@ -107,8 +107,26 @@ export const Profiles = () => {
   };
 
   useEffect(() => {
-    fetchProfiles();
-    fetchAvailableAgents();
+    let isMounted = true;
+    const loadInitial = async () => {
+      try {
+        const [profilesRes, agentsRes] = await Promise.allSettled([
+          api.get('/profiles'),
+          api.get('/agents')
+        ]);
+        if (!isMounted) return;
+        if (profilesRes.status === 'fulfilled') setProfiles(profilesRes.value || []);
+        if (agentsRes.status === 'fulfilled') setAvailableAgents((agentsRes.value || []).filter(a => a.status === 'ONLINE'));
+      } catch (err) {
+        if (isMounted) setError(err.message || 'Failed to load test profiles telemetry');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadInitial();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const openCreateForm = () => {
@@ -155,6 +173,7 @@ export const Profiles = () => {
     setDurationSecondsOverride('');
     setPortOverride('');
     setSelectedAgentId('');
+    fetchAvailableAgents();
     setIsTriggerOpen(true);
   };
 

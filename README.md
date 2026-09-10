@@ -1,21 +1,24 @@
 # 🌐 Distributed Network Monitoring & Diagnostic Portal
 
-A production-grade, secure orchestration portal designed to coordinate distributed network diagnostics (Ping, iPerf3) across multiple remote subnets. Built with **Spring Boot 3 (Java 17)**, **React (Vite)**, and **Python-based polling edge clients**, this platform solves the problem of "vantage point bias" in network monitoring by measuring latency and throughput from the edge of your network back to target endpoints.
+A production-grade, secure orchestration portal designed to coordinate distributed network diagnostics (Ping, iPerf3) across multiple remote subnets. Built with **Spring Boot 3 (Java 17)**, **React (Vite)**, and **Python-based polling edge clients**, this platform measures latency, packet loss, and throughput from remote subnet vantage points back to target endpoints.
 
 ---
 
-## 🚀 Key Features
+## 🚀 Technical Highlights
 
-* **Distributed Edge Polling Architecture**: Remote agents run as lightweight Python processes within isolated subnets. Instead of exposing subnets via inbound firewall ports, agents securely poll the central controller outbound using UUID-based headers (`X-Agent-Token`).
-* **🌐 NOC Subnet Topology Map**: A real-time visual NOC (Network Operations Center) board in the frontend displaying active connections, pulsing controller states, and live CSS packet stream animations representing active polling.
-* **🖥️ Host Diagnostics & Real-time Telemetry**: Active background diagnostics monitors host platform resources (CPU, RAM, and Disk space utilization) and local utility availability (ping/iperf3 binaries) using Java Management APIs.
-* **✨ Premium Glassmorphic Design System**: Custom tailored styles using **Plus Jakarta Sans** typography, cubic-bezier hover micro-animations, glass-morphism panels, and split-screen branding login/signup cards with interactive explanation modals.
-* **📊 Home Dashboard KPI Stats**: Real-time counter row on the welcome dashboard loading active profile counts, scheduled job executions, registered branch agents, and direct system health checks.
-* **🛡️ Command Injection Protection**: Deep parameter sanitization combined with custom Spring JSR-380 validators (`@HostOrIp`) ensuring that user-provided test inputs cannot trigger shell code execution vulnerabilities on local or remote runners.
-* **🔑 Secured Signup & Role Protections (RBAC)**: Strong login/signup form input regex validations (username formatting, RFC emails, password complexity). Strictly defaults all subsequent user registrations to the `VIEWER` role on the database level to prevent privilege escalation attacks.
-* **⏰ Dynamic Cron Scheduling**: Set automated execution schedules (e.g., hourly pings or daily throughput checks) per profile using standard Spring Scheduler cron triggers, dynamically controlled via the UI.
-* **🚨 Multi-Channel Alerting**: Instant alerting dispatch to **Slack** and **Discord** webhooks if latency or packet loss breaches defined thresholds, with internal console-based SMTP warnings.
-* **📝 Security Audit Trails**: All structural or administrative modifications (user role edits, agent token generation, manually triggered runs) are recorded in a permanent audit log database.
+* **Distributed Edge Polling Architecture**: Remote agents run as lightweight Python processes within isolated subnets. Agents poll the central controller outbound using `X-Agent-Token` headers or HMAC-SHA256 request signing.
+* **Atomic Job Claiming (Pessimistic Row Locking)**: Pending jobs are claimed using JPA pessimistic row locking (`PESSIMISTIC_WRITE`) on `TestJobRepository` to ensure thread-safe, single-worker job acquisition across concurrent polling agents.
+* **Execution Lease Protection**: Every job claim attempt generates a unique UUID (`executionLeaseId`). Result submissions validate `jobId`, assigned `agentId`, `RUNNING` status, `attemptNumber`, and matching `executionLeaseId` to prevent stale agents from overwriting newer execution attempts.
+* **Retry, Exponential Backoff & Stale Recovery**: Failed or timed-out job runs automatically requeue with configurable exponential backoff. Inactive running jobs exceeding stale thresholds are recovered and requeued up to `maxAttempts`.
+* **Security & Injection Protection**:
+  * **Authentication & RBAC**: JWT-based user authentication supporting `ADMIN`, `OPERATOR`, and `VIEWER` roles. Registration defaults to `VIEWER`.
+  * **Hashed Agent Credentials**: Plaintext tokens are exposed once on creation/rotation; the backend stores only SHA-256 hashes (`tokenHash`).
+  * **HMAC-SHA256 Request Signing**: Optional request signing with 5-minute timestamp skew validation and in-memory `NonceCache` replay protection.
+  * **Command Allowlisting & Safe Execution**: Strict command allowlisting with direct `ProcessBuilder` list parameterization (no shell string evaluation).
+  * **Target Host Validation**: `@HostOrIp` validator prevents injection and blocks loopback, metadata, link-local, and multicast address abuse.
+* **Application-Local Cron Scheduling**: Automated execution schedules per profile managed via a local Spring `ThreadPoolTaskScheduler` instance (single-node scope).
+* **Multi-Channel Alerting & Incidents**: Direct JSON webhook dispatch to **Slack** and **Discord** endpoints when metrics breach thresholds, paired with an incident lifecycle state machine (OPEN / ONGOING / RESOLVED) and console-logged email alerts.
+* **Security Audit Trails**: Administrative actions (agent creation, token rotation, job dispatches) are logged to a persistent `AuditLog` table.
 
 ---
 
@@ -24,20 +27,21 @@ A production-grade, secure orchestration portal designed to coordinate distribut
 ```mermaid
 graph TD
     subgraph Central Portal Server
-        A[React Frontend] <-->|JWT / REST API| B[Spring Boot Backend]
-        B <-->|JPA / JDBC| C[(PostgreSQL Database)]
-        B -->|Job Dispatch Queue| D[Local Workers]
-        B -->|Scheduled Triggers| E[Cron Engine]
-        B -->|Alert Rules| F[Notification Service]
-        F -->|JSON Webhooks| G[Slack / Discord / SMTP]
+        A[React NOC Frontend] <-->|JWT / REST API| B[Spring Boot Backend Controller]
+        B <-->|JPA Pessimistic Write Lock| C[(PostgreSQL Database)]
+        B -->|ThreadPoolTaskExecutor| D[Local Workers]
+        B -->|ThreadPoolTaskScheduler| E[Application Cron Scheduler]
+        B -->|Threshold Alerts| F[Notification Service]
+        F -->|JSON Webhooks| G[Slack / Discord Webhooks]
+        F -->|Structured Logs| H[Email Logging Channel]
     end
     
     subgraph Isolated Subnet A
-        H[Python Agent A] --->|Outbound Poll / HTTP| B
+        I[Python Agent A] --->|Outbound Poll / HTTP| B
     end
     
     subgraph Isolated Subnet B
-        I[Python Agent B] --->|Outbound Poll / HTTP| B
+        J[Python Agent B] --->|Outbound Poll / HTTP| B
     end
 ```
 
@@ -45,94 +49,97 @@ graph TD
 
 ## 🛠️ Technology Stack
 
-* **Backend**: Spring Boot 3, Java 17, Spring Security, JWT, JPA/Hibernate, Spring Validation
-* **Frontend**: React 18, Vite, Recharts, Custom NOC CSS Animations
+* **Backend**: Spring Boot 3, Java 17, Spring Security, JWT, JPA/Hibernate (PESSIMISTIC_WRITE), Spring Validation
+* **Frontend**: React 18, Vite, Recharts, TailwindCSS, Lucide Icons
 * **Database**: PostgreSQL 15
-* **Edge Runners**: Python 3.10+, socket, subprocess, requests
+* **Edge Runners**: Python 3.10+, socket, subprocess, requests, hmac, hashlib
 
 ---
 
-## ⚙️ Setting Up The Environment
+## ⚙️ Environment Setup & Dependencies
 
-### 1. System Requirements & Dependencies
-Before launching, make sure the running machine has the following tools installed:
+### Requirements
 * **Java 17 JDK** or higher
 * **Maven 3.8+**
 * **Docker & Docker Compose**
-* **Python 3.10+** (with the `requests` library)
-* **System Utilities**: `iperf3` and `iputils-ping` must be in your system path if you intend to run local tests.
+* **Python 3.10+** (with `requests` library)
+* **System Utilities**: `iperf3` and `iputils-ping` in system PATH for local worker execution.
   ```bash
   sudo apt update && sudo apt install iperf3 iputils-ping -y
   ```
 
 ---
 
-## 🚀 Step-by-Step Running Guide
+## 🚀 Execution Guide
 
-### Step 1: Start PostgreSQL
+### Step 1: Start Database
 ```bash
 docker compose up -d
 ```
 
-### Step 2: Build & Start Spring Boot Backend
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Build the JAR package:
-   ```bash
-   mvn clean install
-   ```
-3. Run the application:
-   ```bash
-   mvn spring-boot:run
-   ```
-   *The server starts on port `8082`.*
+### Step 2: Build & Run Spring Boot Backend
+```bash
+cd backend
+mvn clean install
+mvn spring-boot:run
+```
+*Backend server runs on port `8082` (or `8083` depending on configuration).*
 
-### Step 3: Start React Frontend
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install node dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-   *The UI starts on port `5173`. Open your browser to `http://localhost:5173`.*
+### Step 3: Run React Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Frontend dev server runs on port `5173`.*
 
-### Step 4: Connecting a Remote Subnet Agent
-1. Log in to the portal as `admin` (default password: `adminpassword`).
-2. Go to the **Subnet Agents** page.
-3. Register a new agent name (e.g. `Dev-Sandbox`) and copy the generated **Security Token**.
-4. In your terminal, launch the Python agent script:
+### Step 4: Connecting a Remote Python Subnet Agent
+1. Register an agent via the Subnet Agents section in the UI (or via `POST /api/v1/agents` with `ADMIN` role) to obtain an agent token.
+2. Launch the Python agent edge process:
    ```bash
-   PORTAL_SERVER_URL="http://localhost:8082" AGENT_TOKEN="<PASTE_YOUR_GENERATED_TOKEN>" python3 python-agent/agent_client.py
+   PORTAL_SERVER_URL="http://localhost:8082" AGENT_TOKEN="<PASTE_AGENT_TOKEN>" python3 python-agent/agent_client.py
    ```
-5. Look at the **NOC Subnet Topology Map**—the agent's state will instantly turn **ONLINE** with real-time green signal flows.
+3. To enable HMAC request signing:
+   ```bash
+   PORTAL_SERVER_URL="http://localhost:8082" AGENT_TOKEN="<PASTE_AGENT_TOKEN>" ENABLE_HMAC_SIGNING="true" python3 python-agent/agent_client.py
+   ```
 
 ---
 
-## 🛡️ Security Audit & Verification Flow
+## 🛡️ Security Verification Examples
 
-To verify backend-enforced commands, you can inspect the JWT-protected endpoints using curl:
-
-### 1. Authenticate & Obtain Token
+### 1. Authenticate & Obtain JWT Token
 ```bash
 curl -X POST http://localhost:8082/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "adminpassword"}'
+  -d '{"username": "default_admin", "password": "Admin123!"}'
 ```
 
-### 2. Dispatch a Test Job (Targeting the Remote Agent)
-Once you have the token, issue a test job by referencing the profile ID:
+### 2. Dispatch a Diagnostic Test Job
 ```bash
 curl -X POST http://localhost:8082/api/v1/jobs \
   -H "Authorization: Bearer <JWT_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"profileId": 1}'
+  -d '{"profileId": 1, "agentId": 1}'
 ```
-The job will enter the pending queue, the remote Python agent will claim it, execute the test locally, and stream back the result metrics for packet loss and latency.
+
+### 3. Agent Task Polling (Outbound HTTP)
+```bash
+curl -X GET http://localhost:8082/api/v1/agents/poll \
+  -H "X-Agent-Token: <AGENT_TOKEN>"
+```
+
+### 4. Agent Result Submission (With Execution Lease Validation)
+```bash
+curl -X POST http://localhost:8082/api/v1/agents/results/<JOB_ID> \
+  -H "X-Agent-Token: <AGENT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "executionLeaseId": "<LEASE_UUID_FROM_POLL>",
+    "attemptNumber": 1,
+    "status": "SUCCESS",
+    "rttAvgMs": 14.2,
+    "packetLossPct": 0.0,
+    "rawOutput": "PING 8.8.8.8 56(84) bytes of data..."
+  }'
+```

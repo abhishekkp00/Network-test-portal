@@ -87,9 +87,9 @@ public class AgentController {
     }
 
     @PostMapping("/results/{jobId}")
-    @Operation(summary = "Submit diagnostic execution result (Agent API)", description = "Submits parsed execution metrics for a job owned by this agent.")
+    @Operation(summary = "Submit diagnostic execution result (Agent API)", description = "Submits parsed execution metrics for a job owned by this agent. Requires matching executionLeaseId for execution attempt protection.")
     @ApiResponse(responseCode = "200", description = "Result accepted and job transitioned to SUCCESS/FAILED")
-    @ApiResponse(responseCode = "401", description = "Unauthorized - Agent does not own this job or token invalid")
+    @ApiResponse(responseCode = "401", description = "Unauthorized - Agent does not own this job, invalid token, or stale executionLeaseId")
     public ResponseEntity<Void> submitResult(
             @RequestHeader(value = "X-Agent-Token", required = false) String token,
             @RequestHeader(value = "X-Agent-Id", required = false) String agentId,

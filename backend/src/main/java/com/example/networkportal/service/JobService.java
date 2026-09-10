@@ -75,6 +75,7 @@ public class JobService {
         TestJob job = pendingJobOpt.get();
         validateAndTransitionStatus(job, JobStatus.RUNNING);
         job.setAttemptNumber(job.getAttemptNumber() + 1);
+        job.setExecutionLeaseId(java.util.UUID.randomUUID().toString());
         job.setNextRetryAt(null);
         job.setStartedAt(now);
         return jobRepository.save(job);
@@ -219,6 +220,14 @@ public class JobService {
         TestJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
         validateAndTransitionStatus(job, status);
+        if (status == JobStatus.RUNNING) {
+            if (job.getExecutionLeaseId() == null || job.getExecutionLeaseId().isEmpty()) {
+                job.setExecutionLeaseId(java.util.UUID.randomUUID().toString());
+            }
+            if (job.getAttemptNumber() == null || job.getAttemptNumber() == 0) {
+                job.setAttemptNumber(1);
+            }
+        }
         if (startedAt != null) {
             job.setStartedAt(startedAt);
         }

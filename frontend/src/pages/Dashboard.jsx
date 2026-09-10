@@ -25,7 +25,7 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchDashboardData = async (showLoading = true) => {
+  const fetchDashboardData = async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
       const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes] = await Promise.allSettled([
@@ -51,9 +51,38 @@ export const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchDashboardData(false);
-    const interval = setInterval(() => fetchDashboardData(false), 10000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    const loadInitial = async () => {
+      try {
+        const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes] = await Promise.allSettled([
+          api.get('/system/stats'),
+          api.get('/jobs'),
+          api.get('/agents'),
+          api.get('/profiles'),
+          api.get('/incidents')
+        ]);
+        if (!isMounted) return;
+        if (statsRes.status === 'fulfilled') setStats(statsRes.value);
+        if (jobsRes.status === 'fulfilled') setJobs(jobsRes.value || []);
+        if (agentsRes.status === 'fulfilled') setAgents(agentsRes.value || []);
+        if (profilesRes.status === 'fulfilled') setProfiles(profilesRes.value || []);
+        if (incidentsRes.status === 'fulfilled') setIncidents(incidentsRes.value || []);
+        setError('');
+      } catch (err) {
+        if (isMounted) setError(err.message || 'Failed to fetch NOC dashboard telemetry.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadInitial();
+    const interval = setInterval(() => {
+      fetchDashboardData(false);
+    }, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Compute real metrics from backend telemetry only
@@ -66,8 +95,8 @@ export const Dashboard = () => {
   const successJobs = jobs.filter(j => j.status === 'SUCCESS').length;
   const successRate = finishedJobs.length > 0 ? Math.round((successJobs / finishedJobs.length) * 100) : null;
 
-  // Active Incidents derived from incidents telemetry or failed jobs
-  const activeIncidents = incidents.length > 0 ? incidents : jobs.filter(j => ['FAILED', 'TIMEOUT', 'STALE'].includes(j.status));
+  // Active Incidents directly from incidents telemetry (separate from job status)
+  const activeIncidents = incidents;
 
   // Targets derived from actual profile records
   const targets = profiles.map(p => ({
@@ -339,11 +368,11 @@ export const Dashboard = () => {
                 {activeIncidents.slice(0, 3).map((inc) => (
                   <div key={inc.id} className="p-2.5 bg-[#101411] border border-[#ff3333]/40 rounded-[2px] space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-[#ff3333]">#INC-{inc.id} // {inc.profileName || 'Job Failure'}</span>
-                      <StatusIndicator status={inc.status} variant="dot" />
+                      <span className="font-bold text-[#ff3333]">#INC-{inc.id} // {inc.profileName || 'Network Incident'}</span>
+                      <StatusIndicator status={inc.status || 'OPEN'} variant="dot" />
                     </div>
                     <div className="text-[10px] text-[#768a7b]">
-                      Target: {inc.effectiveHost || inc.effectiveServer || inc.hostOverride || inc.serverOverride || 'Profile Default'} — Attempt {inc.attemptNumber || 1}/{inc.maxAttempts || 3}
+                      {inc.summary || 'Incident breach detected'} — Occurrences: {inc.occurrenceCount || 1}
                     </div>
                   </div>
                 ))}

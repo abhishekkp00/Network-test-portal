@@ -7,6 +7,8 @@ import lombok.Data;
 @Builder
 public class AgentTaskDto {
     private Long jobId;
+    private String executionLeaseId;
+    private Integer attemptNumber;
     private String protocol;
     private String host;
     private String server;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { api } from '../utils/api';
 import {
   RotateCw,
@@ -73,29 +73,50 @@ export const Jobs = () => {
     }
   };
 
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     if (pollingIntervalRef.current) return;
     pollingIntervalRef.current = setInterval(() => {
       fetchJobsAndAgents(false);
     }, 2500);
-  };
+  }, []);
 
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchJobsAndAgents(false);
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
+    let isMounted = true;
+    const loadInitial = async () => {
+      try {
+        const [jobsRes, agentsRes] = await Promise.allSettled([
+          api.get('/jobs'),
+          api.get('/agents')
+        ]);
+        if (!isMounted) return;
+        if (jobsRes.status === 'fulfilled') {
+          const sortedJobs = (jobsRes.value || []).sort((a, b) => b.id - a.id);
+          setJobs(sortedJobs);
+          setError('');
+        }
+        if (agentsRes.status === 'fulfilled') {
+          setAgentsList(agentsRes.value || []);
+        }
+      } catch (err) {
+        if (isMounted) setError(err.message || 'Failed to fetch diagnostic execution queue.');
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
-  }, []);
+
+    loadInitial();
+    return () => {
+      isMounted = false;
+      stopPolling();
+    };
+  }, [stopPolling]);
 
   // Set up auto polling when PENDING or RUNNING jobs are present
   useEffect(() => {
@@ -105,7 +126,7 @@ export const Jobs = () => {
     } else {
       stopPolling();
     }
-  }, [jobs]);
+  }, [jobs, startPolling, stopPolling]);
 
   const viewJobDetails = async (job) => {
     setSelectedJob(job);
@@ -666,7 +687,9 @@ export const Jobs = () => {
                       <div className="p-2.5 bg-[#101411] border border-[#27342a] rounded-[2px]">
                         <div className="text-[10px] text-[#768a7b] font-bold uppercase">PACKET LOSS</div>
                         <div className={`text-base font-bold mt-1 ${
-                          result?.packetLossPct > 0 ? 'text-[#ff3333]' : 'text-[#00ff66]'
+                          result?.packetLossPct !== null && result?.packetLossPct !== undefined
+                            ? (result.packetLossPct > 0 ? 'text-[#ff3333]' : 'text-[#00ff66]')
+                            : 'text-[#768a7b]'
                         }`}>
                           {result?.packetLossPct !== null && result?.packetLossPct !== undefined
                             ? `${result.packetLossPct}%`
@@ -677,7 +700,9 @@ export const Jobs = () => {
                       {/* RTT MIN / AVG / MAX */}
                       <div className="p-2.5 bg-[#101411] border border-[#27342a] rounded-[2px]">
                         <div className="text-[10px] text-[#768a7b] font-bold uppercase">RTT (MIN/AVG/MAX)</div>
-                        <div className="text-xs font-bold text-[#00ff66] mt-1">
+                        <div className={`text-xs font-bold mt-1 ${
+                          result?.rttAvgMs !== null && result?.rttAvgMs !== undefined ? 'text-[#00ff66]' : 'text-[#768a7b]'
+                        }`}>
                           {result?.rttAvgMs !== null && result?.rttAvgMs !== undefined
                             ? `${result.rttMinMs ?? '-'}/${result.rttAvgMs}/${result.rttMaxMs ?? '-'} ms`
                             : 'N/A'}
@@ -687,7 +712,9 @@ export const Jobs = () => {
                       {/* JITTER */}
                       <div className="p-2.5 bg-[#101411] border border-[#27342a] rounded-[2px]">
                         <div className="text-[10px] text-[#768a7b] font-bold uppercase">JITTER</div>
-                        <div className="text-base font-bold text-[#ffb000] mt-1">
+                        <div className={`text-base font-bold mt-1 ${
+                          result?.jitterMs !== null && result?.jitterMs !== undefined ? 'text-[#ffb000]' : 'text-[#768a7b]'
+                        }`}>
                           {result?.jitterMs !== null && result?.jitterMs !== undefined
                             ? `${result.jitterMs} ms`
                             : 'N/A'}
@@ -697,7 +724,9 @@ export const Jobs = () => {
                       {/* THROUGHPUT */}
                       <div className="p-2.5 bg-[#101411] border border-[#27342a] rounded-[2px]">
                         <div className="text-[10px] text-[#768a7b] font-bold uppercase">THROUGHPUT</div>
-                        <div className="text-base font-bold text-[#00bfff] mt-1">
+                        <div className={`text-base font-bold mt-1 ${
+                          result?.throughputMbps !== null && result?.throughputMbps !== undefined ? 'text-[#00bfff]' : 'text-[#768a7b]'
+                        }`}>
                           {result?.throughputMbps !== null && result?.throughputMbps !== undefined
                             ? `${result.throughputMbps} Mbps`
                             : 'N/A'}

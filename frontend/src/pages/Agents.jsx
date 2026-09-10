@@ -68,7 +68,21 @@ export const Agents = () => {
   };
 
   useEffect(() => {
-    fetchAgents();
+    let isMounted = true;
+    const loadInitial = async () => {
+      try {
+        const data = await api.get('/agents');
+        if (isMounted) setAgents(data || []);
+      } catch (err) {
+        if (isMounted) setError(err.message || 'Failed to retrieve agent instances from registry.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadInitial();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Register Agent Handler

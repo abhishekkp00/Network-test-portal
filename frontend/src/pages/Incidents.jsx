@@ -73,9 +73,29 @@ export const Incidents = () => {
   };
 
   useEffect(() => {
-    fetchIncidents(false);
-    const interval = setInterval(() => fetchIncidents(false), 10000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    const loadInitial = async () => {
+      try {
+        const data = await api.get('/incidents');
+        if (!isMounted) return;
+        const sorted = (data || []).sort((a, b) => b.id - a.id);
+        setIncidents(sorted);
+        setError('');
+      } catch (err) {
+        if (isMounted) setError(err.message || 'Failed to retrieve network incident telemetry.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadInitial();
+    const interval = setInterval(() => {
+      fetchIncidents(false);
+    }, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const formatDateTime = (dateTimeStr) => {

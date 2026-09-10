@@ -66,6 +66,9 @@ public class TestJob {
     @Builder.Default
     private Integer attemptNumber = 0;
 
+    @Column(name = "execution_lease_id")
+    private String executionLeaseId;
+
     @Column(name = "max_attempts", nullable = false)
     @Builder.Default
     private Integer maxAttempts = 3;

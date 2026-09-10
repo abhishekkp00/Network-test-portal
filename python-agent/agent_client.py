@@ -189,6 +189,8 @@ def main():
             if response.status_code == 200:
                 task = response.json()
                 job_id = task["jobId"]
+                execution_lease_id = task.get("executionLeaseId")
+                attempt_number = task.get("attemptNumber")
                 protocol = task["protocol"]
                 host = task["host"]
                 server = task["server"]
@@ -196,7 +198,7 @@ def main():
                 duration = task.get("durationSeconds", 10)
                 port = task.get("port", 5201)
 
-                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Received Job #{job_id}: {protocol}")
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Received Job #{job_id} (Lease: {execution_lease_id}): {protocol}")
 
                 # Execute task
                 if protocol == "PING":
@@ -205,6 +207,10 @@ def main():
                     # IPERF_TCP or IPERF_UDP
                     iperf_proto = "udp" if "udp" in protocol.lower() else "tcp"
                     output = run_iperf(server, duration, iperf_proto, port)
+
+                # Attach execution lease & attempt info
+                output["executionLeaseId"] = execution_lease_id
+                output["attemptNumber"] = attempt_number
 
                 # Submit results
                 submit_path = f"/api/v1/agents/results/{job_id}"

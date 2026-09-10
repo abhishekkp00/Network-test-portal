@@ -96,6 +96,8 @@ class JobServiceTest {
         assertNotNull(claimedJob);
         assertEquals(JobStatus.RUNNING, claimedJob.getStatus());
         assertEquals(1, claimedJob.getAttemptNumber());
+        assertNotNull(claimedJob.getExecutionLeaseId());
+        assertFalse(claimedJob.getExecutionLeaseId().isEmpty());
         assertNull(claimedJob.getNextRetryAt());
         assertNotNull(claimedJob.getStartedAt());
 
