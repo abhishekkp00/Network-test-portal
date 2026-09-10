@@ -12,6 +12,7 @@ import { AuditLogs } from './pages/AuditLogs';
 import { Diagnostics } from './pages/Diagnostics';
 import { Agents } from './pages/Agents';
 import { Dashboard } from './pages/Dashboard';
+import { Incidents } from './pages/Incidents';
 import {
   Activity,
   Terminal,
@@ -227,6 +228,16 @@ const AppContent = () => {
           <ProtectedRoute>
             <NocLayout>
               <Jobs />
+            </NocLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/incidents" 
+        element={
+          <ProtectedRoute>
+            <NocLayout>
+              <Incidents />
             </NocLayout>
           </ProtectedRoute>
         } 

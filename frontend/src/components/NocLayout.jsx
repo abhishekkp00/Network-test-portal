@@ -218,14 +218,20 @@ export const NocLayout = ({ children }) => {
                   {!collapsed && <span className="truncate">Profiles</span>}
                 </NavLink>
 
-                <button
-                  onClick={() => setShowIncidentsModal(true)}
-                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] text-[#768a7b] hover:text-[#ffb000] hover:bg-[#ffb000]/10 border border-transparent hover:border-[#ffb000]/30 transition-all text-left"
-                  title="Incidents Log"
+                <NavLink
+                  to="/incidents"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-2.5 py-1.5 rounded-[2px] transition-all border ${
+                      isActive
+                        ? 'text-[#00ff66] bg-[#00ff66]/10 border-[#00ff66]/40 font-bold'
+                        : 'text-[#768a7b] hover:text-[#d5e3d8] border-transparent hover:border-[#27342a]'
+                    }`
+                  }
+                  title="Incidents Console"
                 >
                   <AlertTriangle className="w-4 h-4 shrink-0 text-[#ffb000]" />
                   {!collapsed && <span className="truncate">Incidents</span>}
-                </button>
+                </NavLink>
 
                 {isAdmin && (
                   <NavLink
