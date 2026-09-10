@@ -404,3 +404,16 @@ p {
   opacity: 0.12;
 }
 
+/* Accessibility & Keyboard Focus States */
+:focus-visible {
+  outline: 2px solid var(--phosphor-green) !important;
+  outline-offset: 1px !important;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--phosphor-green) !important;
+  outline-offset: 1px !important;
+  border-color: var(--phosphor-green) !important;
+}
+
+
