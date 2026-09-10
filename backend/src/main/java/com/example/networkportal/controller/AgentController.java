@@ -64,7 +64,7 @@ public class AgentController {
     }
 
     @GetMapping("/poll")
-    @Operation(summary = "Poll pending diagnostic task (Agent API)", description = "Atomically claims an available PENDING test job (`SELECT FOR UPDATE SKIP LOCKED`) assigned to this agent using X-Agent-Token or HMAC request signing.")
+    @Operation(summary = "Poll pending diagnostic task (Agent API)", description = "Atomically claims an available PENDING test job using pessimistic row locking (`PESSIMISTIC_WRITE`) assigned to this agent using X-Agent-Token or HMAC request signing.")
     @ApiResponse(responseCode = "200", description = "Job claimed and task parameters returned")
     @ApiResponse(responseCode = "204", description = "No pending jobs available")
     @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid token or HMAC signature")

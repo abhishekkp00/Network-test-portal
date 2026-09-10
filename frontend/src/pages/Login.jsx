@@ -167,7 +167,7 @@ export const Login = () => {
                 <div>
                   <h4 className="text-[#d5e3d8] font-bold text-sm mb-1 uppercase">// Core Telemetry Features</h4>
                   <ul className="list-disc list-inside space-y-1 text-[#d5e3d8]">
-                    <li><strong className="text-[#00ff66]">Atomic Job Claiming:</strong> Row-level PostgreSQL locks (SELECT FOR UPDATE SKIP LOCKED) ensure concurrency safety across polling agents.</li>
+                    <li><strong className="text-[#00ff66]">Atomic Job Claiming:</strong> Pessimistic row locking (PESSIMISTIC_WRITE) ensures concurrency safety across polling agents.</li>
                     <li><strong className="text-[#00ff66]">Live Diagnostic SSE:</strong> Stream binary outputs in real time via Server-Sent Events.</li>
                     <li><strong className="text-[#00ff66]">Incident Lifecycle & Alerts:</strong> Track alert deduplication, state transitions, and automated resolution.</li>
                     <li><strong className="text-[#00ff66]">HMAC Signed Agent Telemetry:</strong> Cryptographic token hashing and HMAC request signatures.</li>

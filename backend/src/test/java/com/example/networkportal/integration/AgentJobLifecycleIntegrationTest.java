@@ -80,7 +80,7 @@ class AgentJobLifecycleIntegrationTest extends BaseIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         JobResponse jobResp = objectMapper.readValue(jobRespStr, JobResponse.class);
 
-        // 4. Agent Polls Task (Atomic Claiming PENDING -> RUNNING via SELECT FOR UPDATE SKIP LOCKED)
+        // 4. Agent Polls Task (Atomic Claiming PENDING -> RUNNING via pessimistic row locking)
         String polledTaskStr = mockMvc.perform(get("/api/v1/agents/poll")
                         .header("X-Agent-Token", agentToken))
                 .andExpect(status().isOk())
