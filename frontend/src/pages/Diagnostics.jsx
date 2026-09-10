@@ -39,8 +39,8 @@ export const Diagnostics = () => {
     setIsRunning(true);
 
     const token = localStorage.getItem('token');
-    // Call the Spring SSE streaming API
-    const url = `http://localhost:8082/api/v1/diagnostics/live-stream?host=${encodeURIComponent(liveHost.trim())}&protocol=${liveProtocol}&count=${liveCount}&token=${encodeURIComponent(token)}`;
+    const baseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+    const url = `${baseUrl}/diagnostics/live-stream?host=${encodeURIComponent(liveHost.trim())}&protocol=${liveProtocol}&count=${liveCount}&token=${encodeURIComponent(token)}`;
 
     const es = new EventSource(url);
     eventSourceRef.current = es;
