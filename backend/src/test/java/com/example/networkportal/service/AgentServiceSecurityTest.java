@@ -201,7 +201,8 @@ class AgentServiceSecurityTest {
         TestJob jobAssignedToAgent2 = TestJob.builder().id(999L).agent(agent2).build();
 
         when(agentRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(agent1));
-        when(jobRepository.findById(999L)).thenReturn(Optional.of(jobAssignedToAgent2));
+        doThrow(new UnauthorizedException("Agent ID 1 is not authorized to submit results for Job #999"))
+                .when(jobService).submitAgentResult(eq(999L), eq(1L), any());
 
         UnauthorizedException ex = assertThrows(UnauthorizedException.class, () ->
                 agentService.submitResult(rawToken, null, null, null, null, "POST", "/api/v1/agents/results/999", 999L, null, "")

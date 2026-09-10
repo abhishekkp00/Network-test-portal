@@ -117,18 +117,18 @@ class JobServiceTest {
     }
 
     @Test
-    @DisplayName("updateJobStatus should reject invalid transition SUCCESS -> RUNNING")
-    void testUpdateJobStatus_InvalidTransition_SuccessToRunning() {
+    @DisplayName("startLocalJobExecution should reject invalid transition SUCCESS -> RUNNING")
+    void testStartLocalJobExecution_InvalidTransition_SuccessToRunning() {
         TestJob successJob = TestJob.builder()
                 .id(101L)
                 .status(JobStatus.SUCCESS)
                 .finishedAt(LocalDateTime.now())
                 .build();
 
-        when(jobRepository.findById(101L)).thenReturn(Optional.of(successJob));
+        when(jobRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(successJob));
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
-                jobService.updateJobStatus(101L, JobStatus.RUNNING, LocalDateTime.now(), null)
+                jobService.startLocalJobExecution(101L)
         );
 
         assertTrue(exception.getMessage().contains("Invalid status transition for Job #101: SUCCESS -> RUNNING"));
@@ -149,6 +149,7 @@ class JobServiceTest {
 
         when(jobRepository.findStaleJobs(eq(JobStatus.RUNNING), any(LocalDateTime.class)))
                 .thenReturn(List.of(staleJob));
+        when(jobRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(staleJob));
         when(jobRepository.save(any(TestJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         jobService.processStaleJobs(cutoff);
@@ -172,6 +173,7 @@ class JobServiceTest {
 
         when(jobRepository.findStaleJobs(eq(JobStatus.RUNNING), any(LocalDateTime.class)))
                 .thenReturn(List.of(staleJob));
+        when(jobRepository.findByIdForUpdate(201L)).thenReturn(Optional.of(staleJob));
         when(jobRepository.save(any(TestJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         jobService.processStaleJobs(cutoff);

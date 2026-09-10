@@ -289,4 +289,33 @@ class ExecutionLeaseProtectionTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(staleResult)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("Lease Validation Test: Wrong Attempt Number + Correct Lease is Rejected")
+    void testWrongAttemptNumber_Rejected() throws Exception {
+        String adminToken = getAdminToken();
+        AgentResponse agent = registerAgent(adminToken, "Agent-WrongAttempt");
+        ProfileResponse profile = createProfile(adminToken, "Profile-WrongAttemptTest");
+        JobResponse job = createJob(adminToken, profile.getId(), agent.getId());
+
+        // Agent polls & claims job
+        String taskStr = mockMvc.perform(get("/api/v1/agents/poll")
+                        .header("X-Agent-Token", agent.getToken()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        AgentTaskDto task = objectMapper.readValue(taskStr, AgentTaskDto.class);
+
+        // Submit result with mismatched attempt number (e.g., attempt 99 instead of 1)
+        WorkerOutputDto result = WorkerOutputDto.builder()
+                .executionLeaseId(task.getExecutionLeaseId())
+                .attemptNumber(99)
+                .status("SUCCESS")
+                .build();
+
+        mockMvc.perform(post("/api/v1/agents/results/" + job.getId())
+                        .header("X-Agent-Token", agent.getToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(result)))
+                .andExpect(status().isUnauthorized());
+    }
 }

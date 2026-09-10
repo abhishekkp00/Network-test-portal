@@ -16,6 +16,7 @@ import com.example.networkportal.repository.TestJobRepository;
 import com.example.networkportal.repository.TestProfileRepository;
 import com.example.networkportal.repository.TestResultRepository;
 import com.example.networkportal.exception.BadRequestException;
+import com.example.networkportal.exception.UnauthorizedException;
 import com.example.networkportal.validation.HostOrIpValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -170,15 +171,15 @@ public class JobService {
         }
 
         CompletableFuture.runAsync(() -> {
+            String activeLeaseId = null;
+            Integer activeAttempt = null;
             try {
-                // Phase 1: Mark job as RUNNING in a short transaction
-                self.updateJobStatus(jobId, JobStatus.RUNNING, LocalDateTime.now(), null);
+                // Phase 1: Mark job as RUNNING in a short transaction with row lock
+                TestJob job = self.startLocalJobExecution(jobId);
+                activeLeaseId = job.getExecutionLeaseId();
+                activeAttempt = job.getAttemptNumber();
 
-                // Fetch job details to get effective parameters
-                TestJob job = jobRepository.findById(jobId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
-
-                log.info("Running job {} in background", jobId);
+                log.info("Running job {} in background (Lease: {})", jobId, activeLeaseId);
 
                 // Phase 2: Execute external process (NO database transaction open during execution!)
                 WorkerOutputDto output = workerExecutorService.executeWorker(
@@ -189,6 +190,8 @@ public class JobService {
                         job.getEffectiveDurationSeconds(),
                         job.getEffectivePort()
                 );
+                output.setExecutionLeaseId(activeLeaseId);
+                output.setAttemptNumber(activeAttempt);
 
                 // Phase 3: Save results and update status in another short transaction
                 JobStatus finalStatus = JobStatus.SUCCESS;
@@ -204,6 +207,8 @@ public class JobService {
                 log.error("Error running background job: " + jobId, e);
                 try {
                     WorkerOutputDto errorOutput = WorkerOutputDto.builder()
+                            .executionLeaseId(activeLeaseId)
+                            .attemptNumber(activeAttempt)
                             .status("FAILED")
                             .errorMessage("Background execution error: " + e.getMessage())
                             .build();
@@ -216,32 +221,77 @@ public class JobService {
     }
 
     @Transactional
-    public void updateJobStatus(Long jobId, JobStatus status, LocalDateTime startedAt, LocalDateTime finishedAt) {
-        TestJob job = jobRepository.findById(jobId)
+    public TestJob startLocalJobExecution(Long jobId) {
+        TestJob job = jobRepository.findByIdForUpdate(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
-        validateAndTransitionStatus(job, status);
-        if (status == JobStatus.RUNNING) {
-            if (job.getExecutionLeaseId() == null || job.getExecutionLeaseId().isEmpty()) {
-                job.setExecutionLeaseId(java.util.UUID.randomUUID().toString());
-            }
-            if (job.getAttemptNumber() == null || job.getAttemptNumber() == 0) {
-                job.setAttemptNumber(1);
-            }
+        validateAndTransitionStatus(job, JobStatus.RUNNING);
+        job.setAttemptNumber(job.getAttemptNumber() == null || job.getAttemptNumber() == 0 ? 1 : job.getAttemptNumber() + 1);
+        job.setExecutionLeaseId(java.util.UUID.randomUUID().toString());
+        job.setStartedAt(LocalDateTime.now());
+        job.setNextRetryAt(null);
+        return jobRepository.save(job);
+    }
+
+    @Transactional
+    public void submitAgentResult(Long jobId, Long agentId, WorkerOutputDto output) {
+        // 1. Acquire pessimistic write lock on TestJob
+        TestJob job = jobRepository.findByIdForUpdate(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
+
+        // 2. Ownership check: authenticated agent owns the job
+        if (job.getAgent() == null || !job.getAgent().getId().equals(agentId)) {
+            throw new UnauthorizedException("Agent ID " + agentId + " is not authorized to submit results for Job #" + jobId);
         }
-        if (startedAt != null) {
-            job.setStartedAt(startedAt);
+
+        // 3. Status check: job must be currently RUNNING
+        if (job.getStatus() != JobStatus.RUNNING) {
+            throw new BadRequestException("Job #" + jobId + " is not in RUNNING status (current status: " + job.getStatus() + ")");
         }
-        if (finishedAt != null) {
-            job.setFinishedAt(finishedAt);
+
+        // 4. Attempt number check: submitted attemptNumber matches current attempt
+        if (output.getAttemptNumber() != null && !output.getAttemptNumber().equals(job.getAttemptNumber())) {
+            throw new UnauthorizedException("Attempt number mismatch for Job #" + jobId + ": expected " + job.getAttemptNumber() + ", got " + output.getAttemptNumber());
         }
-        jobRepository.save(job);
+
+        // 5. Execution lease check: submitted executionLeaseId matches active lease
+        if (output.getExecutionLeaseId() == null || output.getExecutionLeaseId().trim().isEmpty()) {
+            throw new BadRequestException("Missing required executionLeaseId for Job #" + jobId);
+        }
+
+        if (job.getExecutionLeaseId() == null || !job.getExecutionLeaseId().equals(output.getExecutionLeaseId().trim())) {
+            throw new UnauthorizedException("Stale or invalid executionLeaseId for Job #" + jobId + ". Submitted: " + output.getExecutionLeaseId() + ", Active: " + job.getExecutionLeaseId());
+        }
+
+        JobStatus finalStatus = JobStatus.SUCCESS;
+        if ("TIMEOUT".equals(output.getStatus())) {
+            finalStatus = JobStatus.TIMEOUT;
+        } else if ("FAILED".equals(output.getStatus())) {
+            finalStatus = JobStatus.FAILED;
+        }
+
+        saveJobResultInternal(job, finalStatus, output);
     }
 
     @Transactional
     public void saveJobResult(Long jobId, JobStatus finalStatus, WorkerOutputDto output) {
-        TestJob job = jobRepository.findById(jobId)
+        TestJob job = jobRepository.findByIdForUpdate(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
 
+        if (job.getStatus() != JobStatus.RUNNING) {
+            log.warn("Result save rejected for Job #{}: Job is not RUNNING (status: {})", jobId, job.getStatus());
+            return;
+        }
+
+        if (output.getExecutionLeaseId() != null && (job.getExecutionLeaseId() == null || !job.getExecutionLeaseId().equals(output.getExecutionLeaseId().trim()))) {
+            log.warn("Result save rejected for Job #{}: Stale lease", jobId);
+            return;
+        }
+
+        saveJobResultInternal(job, finalStatus, output);
+    }
+
+    private void saveJobResultInternal(TestJob job, JobStatus finalStatus, WorkerOutputDto output) {
+        Long jobId = job.getId();
         // If execution failed or timed out and attempts remain, schedule retry with exponential backoff
         if ((finalStatus == JobStatus.FAILED || finalStatus == JobStatus.TIMEOUT) && job.getAttemptNumber() < job.getMaxAttempts()) {
             long backoffSeconds = calculateExponentialBackoff(job.getAttemptNumber());
@@ -294,7 +344,11 @@ public class JobService {
     @Transactional
     public void processStaleJobs(LocalDateTime cutoff) {
         List<TestJob> staleJobs = jobRepository.findStaleJobs(JobStatus.RUNNING, cutoff);
-        for (TestJob job : staleJobs) {
+        for (TestJob staleJob : staleJobs) {
+            TestJob job = jobRepository.findByIdForUpdate(staleJob.getId()).orElse(null);
+            if (job == null || job.getStatus() != JobStatus.RUNNING) {
+                continue;
+            }
             log.warn("Stale job detected: Job #{} (running since {}). Initiating recovery.", job.getId(), job.getStartedAt());
 
             validateAndTransitionStatus(job, JobStatus.STALE);
@@ -303,10 +357,10 @@ public class JobService {
                 long backoffSeconds = calculateExponentialBackoff(job.getAttemptNumber());
                 LocalDateTime nextRetryAt = LocalDateTime.now().plusSeconds(backoffSeconds);
 
-            job.setNextRetryAt(nextRetryAt);
-            job.setExecutionLeaseId(null);
-            validateAndTransitionStatus(job, JobStatus.PENDING);
-            jobRepository.save(job);
+                job.setNextRetryAt(nextRetryAt);
+                job.setExecutionLeaseId(null);
+                validateAndTransitionStatus(job, JobStatus.PENDING);
+                jobRepository.save(job);
 
                 log.info("Stale Job #{} requeued for retry (attempt {}/{} scheduled at {})",
                         job.getId(), job.getAttemptNumber() + 1, job.getMaxAttempts(), nextRetryAt);
