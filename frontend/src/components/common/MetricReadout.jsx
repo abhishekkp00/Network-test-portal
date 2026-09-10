@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * MetricReadout - Compact 1990s NOC metric display block with status indicators & progress bars.
  */

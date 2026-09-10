@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { RotateCw, FileText, Shield } from 'lucide-react';
 import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
@@ -14,7 +14,7 @@ export const AuditLogs = () => {
     try {
       const data = await api.get('/audit-logs');
       // Sort logs by ID desc (most recent first)
-      const sortedLogs = data.sort((a, b) => b.id - a.id);
+      const sortedLogs = (data || []).sort((a, b) => b.id - a.id);
       setLogs(sortedLogs);
     } catch (err) {
       setError(err.message || 'Failed to fetch audit logs.');
@@ -24,7 +24,20 @@ export const AuditLogs = () => {
   };
 
   useEffect(() => {
-    fetchLogs();
+    let isMounted = true;
+    api.get('/audit-logs')
+      .then(data => {
+        if (isMounted) {
+          setLogs((data || []).sort((a, b) => b.id - a.id));
+        }
+      })
+      .catch(err => {
+        if (isMounted) setError(err.message || 'Failed to fetch audit logs.');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+    return () => { isMounted = false; };
   }, []);
 
   const formatDateTime = (dateTimeStr) => {

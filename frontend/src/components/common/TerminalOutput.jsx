@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Terminal, Copy, Check, WrapText } from 'lucide-react';
 import RetroButton from './RetroButton';
 

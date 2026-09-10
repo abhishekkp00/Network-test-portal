@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -6,8 +6,6 @@ import {
   RotateCw,
   Plus,
   Trash2,
-  Terminal,
-  Shield,
   Network,
   Search,
   KeyRound,
@@ -15,8 +13,7 @@ import {
   AlertTriangle,
   X,
   Check,
-  Copy,
-  SlidersHorizontal
+  Copy
 } from 'lucide-react';
 import {
   NocPanel,

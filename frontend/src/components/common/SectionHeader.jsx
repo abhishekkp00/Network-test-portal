@@ -1,7 +1,5 @@
-import React from 'react';
-
 /**
- * SectionHeader - Technical section header with system ID tag, title, action slot & separator line.
+ * SectionHeader - Page level header block for retro NOC workstations.
  */
 export const SectionHeader = ({
   code,

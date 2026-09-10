@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * RetroButton - Monospace technical button with phosphor green/amber outline & hover states.
  */

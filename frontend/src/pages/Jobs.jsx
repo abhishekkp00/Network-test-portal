@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../utils/api';
 import {
   RotateCw,
@@ -8,12 +8,9 @@ import {
   X,
   Activity,
   Search,
-  Filter,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
-  Radio,
-  SlidersHorizontal,
   Clock
 } from 'lucide-react';
 import {
@@ -76,21 +73,6 @@ export const Jobs = () => {
     }
   };
 
-  useEffect(() => {
-    fetchJobsAndAgents();
-    return () => stopPolling();
-  }, []);
-
-  // Set up auto polling when PENDING or RUNNING jobs are present
-  useEffect(() => {
-    const hasActiveJobs = jobs.some(j => j.status === 'PENDING' || j.status === 'RUNNING');
-    if (hasActiveJobs) {
-      startPolling();
-    } else {
-      stopPolling();
-    }
-  }, [jobs]);
-
   const startPolling = () => {
     if (pollingIntervalRef.current) return;
     pollingIntervalRef.current = setInterval(() => {
@@ -104,6 +86,26 @@ export const Jobs = () => {
       pollingIntervalRef.current = null;
     }
   };
+
+  useEffect(() => {
+    fetchJobsAndAgents(false);
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  // Set up auto polling when PENDING or RUNNING jobs are present
+  useEffect(() => {
+    const hasActiveJobs = jobs.some(j => j.status === 'PENDING' || j.status === 'RUNNING');
+    if (hasActiveJobs) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  }, [jobs]);
 
   const viewJobDetails = async (job) => {
     setSelectedJob(job);
@@ -143,10 +145,10 @@ export const Jobs = () => {
   const calculateDuration = (startedAt, finishedAt, status) => {
     if (status === 'PENDING') return 'pending';
     if (status === 'RUNNING') return 'running...';
-    if (!startedAt) return 'N/A';
+    if (!startedAt || !finishedAt) return 'N/A';
 
     const start = new Date(startedAt).getTime();
-    const end = finishedAt ? new Date(finishedAt).getTime() : Date.now();
+    const end = new Date(finishedAt).getTime();
     if (isNaN(start) || isNaN(end)) return 'N/A';
 
     const diffSec = Math.max(0, (end - start) / 1000).toFixed(1);
@@ -237,12 +239,13 @@ export const Jobs = () => {
           valA = new Date(a.createdAt || 0).getTime();
           valB = new Date(b.createdAt || 0).getTime();
           break;
-        case 'duration':
-          const durA = a.startedAt ? (a.finishedAt ? new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime() : Date.now() - new Date(a.startedAt).getTime()) : 0;
-          const durB = b.startedAt ? (b.finishedAt ? new Date(b.finishedAt).getTime() - new Date(b.startedAt).getTime() : Date.now() - new Date(b.startedAt).getTime()) : 0;
+        case 'duration': {
+          const durA = (a.startedAt && a.finishedAt) ? new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime() : 0;
+          const durB = (b.startedAt && b.finishedAt) ? new Date(b.finishedAt).getTime() - new Date(b.startedAt).getTime() : 0;
           valA = durA;
           valB = durB;
           break;
+        }
         default:
           valA = a.id;
           valB = b.id;
@@ -254,17 +257,14 @@ export const Jobs = () => {
     });
   }, [jobs, searchTerm, statusFilter, protocolFilter, agentFilter, sortField, sortDirection]);
 
-  // Reset pagination on filter change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, protocolFilter, agentFilter, pageSize]);
-
   // Pagination calculation
   const totalPages = Math.ceil(filteredAndSortedJobs.length / pageSize) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
   const paginatedJobs = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (safeCurrentPage - 1) * pageSize;
     return filteredAndSortedJobs.slice(start, start + pageSize);
-  }, [filteredAndSortedJobs, currentPage, pageSize]);
+  }, [filteredAndSortedJobs, safeCurrentPage, pageSize]);
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -426,8 +426,8 @@ export const Jobs = () => {
         title={`Diagnostic Records (${filteredAndSortedJobs.length} match)`}
         badge={
           <span className="text-[10px] text-[#768a7b]">
-            Showing {filteredAndSortedJobs.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}–
-            {Math.min(currentPage * pageSize, filteredAndSortedJobs.length)} of {filteredAndSortedJobs.length}
+            Showing {filteredAndSortedJobs.length > 0 ? (safeCurrentPage - 1) * pageSize + 1 : 0}–
+            {Math.min(safeCurrentPage * pageSize, filteredAndSortedJobs.length)} of {filteredAndSortedJobs.length}
           </span>
         }
         noPadding
@@ -563,7 +563,7 @@ export const Jobs = () => {
 
           <div className="flex items-center gap-3">
             <span>
-              Page <strong className="text-[#d5e3d8]">{currentPage}</strong> of <strong className="text-[#d5e3d8]">{totalPages}</strong>
+              Page <strong className="text-[#d5e3d8]">{safeCurrentPage}</strong> of <strong className="text-[#d5e3d8]">{totalPages}</strong>
             </span>
             <div className="flex items-center gap-1">
               <RetroButton
@@ -571,7 +571,7 @@ export const Jobs = () => {
                 size="sm"
                 icon={ChevronLeft}
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
+                disabled={safeCurrentPage === 1}
               >
                 Prev
               </RetroButton>
@@ -580,7 +580,7 @@ export const Jobs = () => {
                 size="sm"
                 icon={ChevronRight}
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={safeCurrentPage === totalPages}
               >
                 Next
               </RetroButton>

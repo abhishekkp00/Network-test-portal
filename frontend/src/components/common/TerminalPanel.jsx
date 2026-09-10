@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Copy, Check, Trash2, WrapText, Activity, AlertTriangle, CheckCircle2, Square } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Terminal, Copy, Check, Trash2, WrapText, Square } from 'lucide-react';
 import RetroButton from './RetroButton';
 import StatusIndicator from './StatusIndicator';
 
@@ -39,13 +39,9 @@ export const TerminalPanel = ({
   }, [lines]);
 
   // Helper to extract or prepend timestamp
-  const parseLine = (lineData, index) => {
+  const parseLine = (lineData) => {
     let text = typeof lineData === 'string' ? lineData : lineData.text || '';
-    let timestamp = typeof lineData === 'object' && lineData.timestamp ? lineData.timestamp : null;
     let explicitType = typeof lineData === 'object' ? lineData.type : null;
-
-    // Check if line already starts with timestamp like [16:42:01] or [System]
-    const timestampMatch = text.match(/^(\[\d{2}:\d{2}:\d{2}\]|\[\w+\])\s*(.*)/);
     
     // Determine semantic status for color coding
     const lowerText = text.toLowerCase();

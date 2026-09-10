@@ -1,19 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../utils/api';
 import {
   AlertTriangle,
   RotateCw,
   Search,
-  Filter,
   ArrowUpDown,
   CheckCircle2,
-  Clock,
   Shield,
   Activity,
   X,
-  Info,
-  ChevronRight,
-  SlidersHorizontal
+  Info
 } from 'lucide-react';
 import {
   NocPanel,
@@ -33,7 +29,7 @@ const SeverityBadge = ({ severity }) => {
     INFO: { label: 'INFO', color: 'text-[#00bfff]', bg: 'bg-[#00bfff]/10', border: 'border-[#00bfff]/30', dot: 'bg-[#00bfff]' },
     WARNING: { label: 'WARNING', color: 'text-[#ffb000]', bg: 'bg-[#ffb000]/10', border: 'border-[#ffb000]/30', dot: 'bg-[#ffb000]' },
     HIGH: { label: 'HIGH', color: 'text-[#ff6600]', bg: 'bg-[#ff6600]/10', border: 'border-[#ff6600]/30', dot: 'bg-[#ff6600]' },
-    CRITICAL: { label: 'CRITICAL', color: 'text-[#ff3333]', bg: 'bg-[#ff3333]/10', border: 'border-[#ff3333]/30', dot: 'bg-[#ff3333]' },
+    CRITICAL: { label: 'CRITICAL', color: 'text-[#ff3333]', bg: 'bg-[#ff3333]/10', border: 'border-[#ff3333]/40', dot: 'bg-[#ff3333]' },
   };
 
   const style = config[norm] || config.WARNING;
@@ -77,7 +73,7 @@ export const Incidents = () => {
   };
 
   useEffect(() => {
-    fetchIncidents();
+    fetchIncidents(false);
     const interval = setInterval(() => fetchIncidents(false), 10000);
     return () => clearInterval(interval);
   }, []);

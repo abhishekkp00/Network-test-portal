@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Plus, RotateCw, Play, History, Edit3, Trash2, Clock, Activity, X } from 'lucide-react';
-import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout, NocTelemetryChart } from '../components/common';
+import { Plus, RotateCw, Play, History, Edit3, Trash2, X } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, NocTelemetryChart } from '../components/common';
 
 const validateHostOrIp = (value) => {
   if (!value) return false;
@@ -12,14 +11,14 @@ const validateHostOrIp = (value) => {
   if (trimmed.length > 253) return false;
   
   // Reject shell metacharacters and spaces
-  const dangerousChars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r', ' ', '\t', '\'', '\"', '*', '?'];
+  const dangerousChars = [';', '&', '|', '`', '$', '(', ')', '<', '>', '\n', '\r', ' ', '\t', '\'', '"', '*', '?'];
   for (let char of dangerousChars) {
     if (trimmed.includes(char)) return false;
   }
   
   const ipv4Regex = /^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$/;
-  const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
-  const hostRegex = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/;
+  const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+  const hostRegex = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$/;
   
   return ipv4Regex.test(trimmed) || ipv6Regex.test(trimmed) || hostRegex.test(trimmed);
 };

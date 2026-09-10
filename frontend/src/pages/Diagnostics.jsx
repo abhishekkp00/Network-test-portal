@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
-import { Shield, RotateCw, Play, Square, Cpu, HardDrive, Server, Terminal, Radio } from 'lucide-react';
+import { RotateCw, Play, Square, Cpu, HardDrive, Server } from 'lucide-react';
 import {
   NocPanel,
   RetroButton,
@@ -81,7 +81,7 @@ export const Diagnostics = () => {
       setIsRunning(false);
     });
 
-    es.addEventListener('error', (event) => {
+    es.addEventListener('error', () => {
       const timeHeader = getTimestampStr();
       setTerminalLines((prev) => [
         ...prev,
@@ -120,7 +120,12 @@ export const Diagnostics = () => {
   };
 
   useEffect(() => {
-    fetchDiagnostics();
+    let isMounted = true;
+    api.get('/system/diagnostics')
+      .then(data => { if (isMounted) setReport(data); })
+      .catch(err => { if (isMounted) setError(err.message || 'Failed to retrieve system diagnostics.'); })
+      .finally(() => { if (isMounted) setLoading(false); });
+    return () => { isMounted = false; };
   }, []);
 
   if (loading && !report) {

@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * NocPanel - Technical panel container with 1px borders, header bar, and status readout.
  * Uses dark graphite background and sharp technical styling.

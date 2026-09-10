@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { RotateCw, Users as UsersIcon, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { RotateCw, Users as UsersIcon, ShieldAlert } from 'lucide-react';
 import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
 
 export const Users = () => {
@@ -23,7 +23,12 @@ export const Users = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    let isMounted = true;
+    api.get('/users')
+      .then(data => { if (isMounted) setUsers(data); })
+      .catch(err => { if (isMounted) setError(err.message || 'Failed to fetch users.'); })
+      .finally(() => { if (isMounted) setLoading(false); });
+    return () => { isMounted = false; };
   }, []);
 
   const handleToggleEnabled = async (userId, currentStatus) => {

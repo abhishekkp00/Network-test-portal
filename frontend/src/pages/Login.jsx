@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Terminal, Shield, Info, LogIn, ArrowRight, X } from 'lucide-react';
-import { NocPanel, RetroButton, StatusIndicator, SectionHeader } from '../components/common';
+import { Info, LogIn, X } from 'lucide-react';
+import { NocPanel, RetroButton, StatusIndicator } from '../components/common';
 
 export const Login = () => {
   const [username, setUsername] = useState('');

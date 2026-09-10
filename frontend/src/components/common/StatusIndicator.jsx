@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * StatusIndicator - Technical status indicator LED / bracket tag for NOC states.
  * States: ONLINE, DEGRADED, OFFLINE, PENDING, RUNNING, SUCCESS, FAILED, TIMEOUT, STALE
@@ -7,7 +5,6 @@ import React from 'react';
 export const StatusIndicator = ({
   status,
   text,
-  size = 'sm',
   pulse = true,
   variant = 'badge', // 'badge' | 'dot'
   className = ''

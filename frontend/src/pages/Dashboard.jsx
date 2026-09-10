@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
 import {
@@ -11,11 +11,9 @@ import {
   Server,
   HardDrive,
   CheckCircle2,
-  Network,
-  ArrowRight,
-  ShieldCheck
+  ArrowRight
 } from 'lucide-react';
-import { NocPanel, MetricReadout, StatusIndicator, SectionHeader, RetroButton } from '../components/common';
+import { NocPanel, MetricReadout, StatusIndicator, RetroButton } from '../components/common';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
@@ -23,38 +21,38 @@ export const Dashboard = () => {
   const [jobs, setJobs] = useState([]);
   const [agents, setAgents] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    setError('');
+  const fetchDashboardData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const [statsRes, jobsRes, agentsRes, profilesRes] = await Promise.allSettled([
+      const [statsRes, jobsRes, agentsRes, profilesRes, incidentsRes] = await Promise.allSettled([
         api.get('/system/stats'),
         api.get('/jobs'),
         api.get('/agents'),
-        api.get('/profiles')
+        api.get('/profiles'),
+        api.get('/incidents')
       ]);
 
       if (statsRes.status === 'fulfilled') setStats(statsRes.value);
-      if (jobsRes.status === 'fulfilled') {
-        const sortedJobs = (jobsRes.value || []).sort((a, b) => b.id - a.id);
-        setJobs(sortedJobs);
-      }
+      if (jobsRes.status === 'fulfilled') setJobs(jobsRes.value || []);
       if (agentsRes.status === 'fulfilled') setAgents(agentsRes.value || []);
       if (profilesRes.status === 'fulfilled') setProfiles(profilesRes.value || []);
+      if (incidentsRes.status === 'fulfilled') setIncidents(incidentsRes.value || []);
 
+      setError('');
     } catch (err) {
-      setError(err.message || 'Telemetry acquisition failed.');
+      setError(err.message || 'Failed to fetch NOC dashboard telemetry.');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 10000);
+    fetchDashboardData(false);
+    const interval = setInterval(() => fetchDashboardData(false), 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -68,8 +66,8 @@ export const Dashboard = () => {
   const successJobs = jobs.filter(j => j.status === 'SUCCESS').length;
   const successRate = finishedJobs.length > 0 ? Math.round((successJobs / finishedJobs.length) * 100) : null;
 
-  // Active Incidents derived from jobs in FAILED, TIMEOUT, or STALE status
-  const incidents = jobs.filter(j => ['FAILED', 'TIMEOUT', 'STALE'].includes(j.status));
+  // Active Incidents derived from incidents telemetry or failed jobs
+  const activeIncidents = incidents.length > 0 ? incidents : jobs.filter(j => ['FAILED', 'TIMEOUT', 'STALE'].includes(j.status));
 
   // Targets derived from actual profile records
   const targets = profiles.map(p => ({
@@ -329,16 +327,16 @@ export const Dashboard = () => {
           <NocPanel
             code="INCIDENTS_MONITOR"
             title="Active Incidents"
-            status={incidents.length > 0 ? 'danger' : 'default'}
-            badge={<StatusIndicator status={incidents.length > 0 ? 'FAILED' : 'RESOLVED'} text={incidents.length > 0 ? `${incidents.length} ALERTS` : '0 ALERTS'} />}
+            status={activeIncidents.length > 0 ? 'danger' : 'default'}
+            badge={<StatusIndicator status={activeIncidents.length > 0 ? 'FAILED' : 'RESOLVED'} text={activeIncidents.length > 0 ? `${activeIncidents.length} ALERTS` : '0 ALERTS'} />}
           >
-            {incidents.length === 0 ? (
+            {activeIncidents.length === 0 ? (
               <div className="text-center py-4 text-[#768a7b] text-xs">
                 NO ACTIVE INCIDENTS DETECTED. ALL METRICS STABLE.
               </div>
             ) : (
               <div className="space-y-2">
-                {incidents.slice(0, 3).map((inc) => (
+                {activeIncidents.slice(0, 3).map((inc) => (
                   <div key={inc.id} className="p-2.5 bg-[#101411] border border-[#ff3333]/40 rounded-[2px] space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-[#ff3333]">#INC-{inc.id} // {inc.profileName || 'Job Failure'}</span>
