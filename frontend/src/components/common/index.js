@@ -5,3 +5,4 @@ export { default as RetroButton } from './RetroButton';
 export { default as SectionHeader } from './SectionHeader';
 export { default as TerminalOutput } from './TerminalOutput';
 export { default as TerminalPanel } from './TerminalPanel';
+export { default as NocTelemetryChart } from './NocTelemetryChart';

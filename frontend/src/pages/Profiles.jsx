@@ -3,7 +3,7 @@ import { api } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Plus, RotateCw, Play, History, Edit3, Trash2, Clock, Activity, X } from 'lucide-react';
-import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout } from '../components/common';
+import { NocPanel, RetroButton, StatusIndicator, SectionHeader, MetricReadout, NocTelemetryChart } from '../components/common';
 
 const validateHostOrIp = (value) => {
   if (!value) return false;
@@ -695,67 +695,69 @@ export const Profiles = () => {
               )}
 
               {!historyLoading && !historyError && historyData.length > 0 && (
-                <div className="space-y-6 font-mono">
+                <div className="space-y-4 font-mono">
                   <div className="text-xs text-[#768a7b]">
-                    Showing metric telemetry over last {historyData.length} executions.
+                    Displaying engineering telemetry plot over last {historyData.length} run samples:
                   </div>
 
-                  {/* Chart 1: Latency / Throughput */}
-                  <div>
-                    <h4 className="text-xs font-bold text-[#d5e3d8] mb-2 uppercase">
-                      {selectedProfile.protocol === 'PING' ? '// RTT Latency (ms)' : '// Throughput (Mbps)'}
-                    </h4>
-                    <div className="h-56 w-full bg-[#101411] border border-[#27342a] p-2 rounded-[2px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={historyData.map(d => ({
-                          time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                          latency: d.rttAvgMs,
-                          throughput: d.throughputMbps,
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#27342a" />
-                          <XAxis dataKey="time" stroke="#768a7b" fontSize={10} tickLine={false} />
-                          <YAxis stroke="#768a7b" fontSize={10} tickLine={false} unit={selectedProfile.protocol === 'PING' ? 'ms' : 'Mbps'} />
-                          <Tooltip 
-                            contentStyle={{ background: '#101411', border: '1px solid #27342a', fontSize: '11px', fontFamily: 'IBM Plex Mono' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'IBM Plex Mono' }} />
-                          {selectedProfile.protocol === 'PING' ? (
-                            <Line type="monotone" dataKey="latency" name="RTT Avg (ms)" stroke="#00ff66" strokeWidth={2} dot={{ r: 3 }} />
-                          ) : (
-                            <Line type="monotone" dataKey="throughput" name="Throughput (Mbps)" stroke="#00bfff" strokeWidth={2} dot={{ r: 3 }} />
-                          )}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                  {/* 1. RTT / Latency / Throughput Instrumentation */}
+                  <NocTelemetryChart
+                    title={selectedProfile.protocol === 'PING' ? "RTT Latency Telemetry (ms)" : "Throughput Telemetry (Mbps)"}
+                    code={selectedProfile.protocol}
+                    data={historyData.map((d, i) => ({
+                      sample: `#${i + 1}`,
+                      time: new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                      rttAvg: d.rttAvgMs,
+                      rttMin: d.rttMinMs,
+                      rttMax: d.rttMaxMs,
+                      throughput: d.throughputMbps
+                    }))}
+                    metrics={
+                      selectedProfile.protocol === 'PING'
+                        ? [
+                            { key: 'rttAvg', name: 'RTT Avg', color: '#00ff66', unit: 'ms' },
+                            { key: 'rttMin', name: 'RTT Min', color: '#00bfff', unit: 'ms' },
+                            { key: 'rttMax', name: 'RTT Max', color: '#ffb000', unit: 'ms' }
+                          ]
+                        : [
+                            { key: 'throughput', name: 'Throughput', color: '#00bfff', unit: 'Mbps' }
+                          ]
+                    }
+                    height={200}
+                  />
 
-                  {/* Chart 2: Packet Loss */}
-                  <div>
-                    <h4 className="text-xs font-bold text-[#d5e3d8] mb-2 uppercase">
-                      // Packet Loss & Jitter
-                    </h4>
-                    <div className="h-56 w-full bg-[#101411] border border-[#27342a] p-2 rounded-[2px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={historyData.map(d => ({
-                          time: new Date(d.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                          loss: d.packetLossPct,
-                          jitter: d.jitterMs
-                        }))}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#27342a" />
-                          <XAxis dataKey="time" stroke="#768a7b" fontSize={10} tickLine={false} />
-                          <YAxis stroke="#768a7b" fontSize={10} tickLine={false} />
-                          <Tooltip 
-                            contentStyle={{ background: '#101411', border: '1px solid #27342a', fontSize: '11px', fontFamily: 'IBM Plex Mono' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: '11px', fontFamily: 'IBM Plex Mono' }} />
-                          <Line type="monotone" dataKey="loss" name="Packet Loss (%)" stroke="#ff3333" strokeWidth={2} dot={{ r: 3 }} />
-                          {selectedProfile.protocol === 'IPERF' && (
-                            <Line type="monotone" dataKey="jitter" name="Jitter (ms)" stroke="#ffb000" strokeWidth={2} dot={{ r: 3 }} />
-                          )}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                  {/* 2. Packet Loss & Jitter Instrumentation */}
+                  <NocTelemetryChart
+                    title="Packet Loss & Jitter Telemetry"
+                    code="FAULTS // DISRUPTION"
+                    data={historyData.map((d, i) => ({
+                      sample: `#${i + 1}`,
+                      time: new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                      loss: d.packetLossPct,
+                      jitter: d.jitterMs
+                    }))}
+                    metrics={[
+                      { key: 'loss', name: 'Packet Loss', color: '#ff3333', unit: '%' },
+                      { key: 'jitter', name: 'Jitter', color: '#ffb000', unit: 'ms' }
+                    ]}
+                    height={200}
+                  />
+
+                  {/* 3. Availability / Success Instrumentation */}
+                  <NocTelemetryChart
+                    title="Availability & Health Telemetry (%)"
+                    code="UPTIME // DISPATCH"
+                    data={historyData.map((d, i) => ({
+                      sample: `#${i + 1}`,
+                      time: new Date(d.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                      availability: d.exitCode === 0 || d.parsedStatus === 'SUCCESS' ? 100 : 0
+                    }))}
+                    metrics={[
+                      { key: 'availability', name: 'Availability', color: '#00ff66', unit: '%' }
+                    ]}
+                    height={160}
+                  />
+
                 </div>
               )}
             </NocPanel>
